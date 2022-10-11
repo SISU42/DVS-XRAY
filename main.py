@@ -1,12 +1,44 @@
+from typing import Union
+
 import streamlit as st
 import pandas as pd
 from st_aggrid import AgGrid, GridOptionsBuilder
+
+from api_calls import get_db_status
+
+
+def process_db_status(db_status: Union[int, str]) -> None:
+    if db_status == '1':
+        st.success("Connection successful")
+    else:
+        st.error("Cannot connect to db")
+    return
+
+
+def connect_to_db(db_name: str) -> None:
+    db_status = None
+    if db_name == 'DVS Analytics':
+        db_status = get_db_status('forecast')
+    elif db_name == "DVS Training":
+        db_status = get_db_status('prod')
+    elif db_name == "Mayo Clinic":
+        db_status = get_db_status('mayo')
+
+
+
+    process_db_status(db_status)
+
+    return
+
 
 # Sidebar selection
 add_selectbox = st.sidebar.selectbox(
     "Select DB: ",
     ("None", "DVS Analytics", "DVS Training", "Mayo Clinic")
 )
+
+if add_selectbox != 'None':
+    connect_to_db(add_selectbox)
 
 
 # Add tabs
