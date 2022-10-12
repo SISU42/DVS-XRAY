@@ -4,7 +4,7 @@ import streamlit as st
 import pandas as pd
 from st_aggrid import AgGrid, GridOptionsBuilder
 
-from api_calls import get_db_status
+from api_calls import get_db_status, get_trainer_list, get_facility_list, get_team_list, get_org_list
 
 
 def process_db_status(db_status: Union[int, str]) -> None:
@@ -15,20 +15,24 @@ def process_db_status(db_status: Union[int, str]) -> None:
     return
 
 
-def connect_to_db(db_name: str) -> None:
+def connect_to_db(db_name: str) -> Union[None, str]:
     db_status = None
+    db_name_ = None
     if db_name == 'DVS Analytics':
-        db_status = get_db_status('forecast')
+        db_name_ = 'forecast'
+        db_status = get_db_status(db_name_)
     elif db_name == "DVS Training":
-        db_status = get_db_status('prod')
+        db_name_ = 'prod'
+        db_status = get_db_status(db_name_)
     elif db_name == "Mayo Clinic":
-        db_status = get_db_status('mayo')
-
-
+        db_name_ = 'mayo'
+        db_status = get_db_status(db_name_)
+    else:
+        return None
 
     process_db_status(db_status)
 
-    return
+    return db_name_
 
 
 # Sidebar selection
@@ -37,8 +41,9 @@ add_selectbox = st.sidebar.selectbox(
     ("None", "DVS Analytics", "DVS Training", "Mayo Clinic")
 )
 
+db_connection_name = None
 if add_selectbox != 'None':
-    connect_to_db(add_selectbox)
+    db_connection_name = connect_to_db(add_selectbox)
 
 
 # Add tabs
@@ -48,18 +53,20 @@ tab_player, tab_score, tab_report, tab_x_ray, tab_compare, tab_logout = st.tabs(
 # Player tab
 with st.expander("Add new player"):
     with st.form(key="add_new_player"):
-        first_name = st.text_input(label="First name")
-        last_name = st.text_input(label="Last name")
-        birthdate = st.date_input(label="Birthdate")
-        email = st.text_input(label="Email")
-        trainer = st.selectbox(label="Trainer", options=["This", "list", "needs", "to", "be", "populated"])
-        facility = st.selectbox(label="Facility", options=["This", "list", "needs", "to", "be", "populated"])
-        organization = st.selectbox(label="Organization", options=["This", "list", "needs", "to", "be", "populated"])
-        team = st.selectbox(label="Team", options=["This", "list", "needs", "to", "be", "populated"])
+        first_name = st.text_input(label="First name*")
+        last_name = st.text_input(label="Last name*")
+        birthdate = st.date_input(label="Birthdate*")
+        email = st.text_input(label="Email*")
+        trainer = st.selectbox(label="Trainer*", options=get_trainer_list(db_connection_name))
+        facility = st.selectbox(label="Facility*", options=get_facility_list(db_connection_name))
+        organization = st.selectbox(label="Organization*", options=get_org_list(db_connection_name))
+        team = st.selectbox(label="Team*", options=get_team_list(db_connection_name))
         position = st.selectbox(label="Position", options=["Starter", "Reliever"])
         throws = st.selectbox(label="Throws", options=["Left", "Right"])
-        workout = st.selectbox(label="Workout", options=["This", "list", "needs", "to", "be", "populated"])
+        workout = st.selectbox(label="Workout*", options=["This", "list", "needs", "to", "be", "populated"])
         phone = st.text_input(label="Phone", max_chars=10)
+
+        st.text('*Required')
 
         submit_form = st.form_submit_button(label="SUBMIT")
 
