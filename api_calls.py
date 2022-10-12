@@ -84,3 +84,21 @@ def get_org_list(db_name: str) -> List:
     response = requests.request("GET", url, headers=headers, data=payload)
 
     return [f"{i['org_id']} - {i['org_name']}" for i in response.json()]
+
+
+def get_workout_list(db_name: str) -> List:
+    """
+    Get workout names list based on db name
+    :param db_name:
+    :return:
+    """
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/workout_names_list/{db_name}"
+
+    payload = {}
+    headers = {
+        'access_token': 'dv$2022'
+    }
+
+    response = requests.request("GET", url, headers=headers, data=payload)
+
+    return [i['workout_name'] for i in response.json()]

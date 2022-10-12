@@ -4,7 +4,7 @@ import streamlit as st
 import pandas as pd
 from st_aggrid import AgGrid, GridOptionsBuilder
 
-from api_calls import get_db_status, get_trainer_list, get_facility_list, get_team_list, get_org_list
+from api_calls import get_db_status, get_trainer_list, get_facility_list, get_team_list, get_org_list, get_workout_list
 
 
 def process_db_status(db_status: Union[int, str]) -> None:
@@ -63,7 +63,7 @@ with st.expander("Add new player"):
         team = st.selectbox(label="Team*", options=get_team_list(db_connection_name))
         position = st.selectbox(label="Position", options=["Starter", "Reliever"])
         throws = st.selectbox(label="Throws", options=["Left", "Right"])
-        workout = st.selectbox(label="Workout*", options=["This", "list", "needs", "to", "be", "populated"])
+        workout = st.selectbox(label="Workout*", options=get_workout_list(db_connection_name))
         phone = st.text_input(label="Phone", max_chars=10)
 
         st.text('*Required')
