@@ -1,6 +1,16 @@
-from typing import List
+from typing import List, Dict
+
+import pandas as pd
+from st_aggrid import AgGridReturn, GridOptionsBuilder, AgGrid
 
 import requests
+import random
+
+
+def get_random_string() -> str:
+    corpus = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    random_sample = random.sample(corpus, 16)
+    return "".join(random_sample)
 
 
 def get_db_status(db_name: str) -> str:
@@ -47,7 +57,7 @@ def get_facility_list(db_name: str) -> List:
 
     response = requests.request("GET", url, headers=headers, data=payload)
 
-    return [f"{i['dvs_facility_id']} - {i['facility_name']}" for i in response.json()]
+    return [f"{i['facility_name']}" for i in response.json()]
 
 
 def get_team_list(db_name: str) -> List:
@@ -83,7 +93,7 @@ def get_org_list(db_name: str) -> List:
 
     response = requests.request("GET", url, headers=headers, data=payload)
 
-    return [f"{i['org_id']} - {i['org_name']}" for i in response.json()]
+    return [f"{i['org_name']}" for i in response.json()]
 
 
 def get_workout_list(db_name: str) -> List:
@@ -102,3 +112,59 @@ def get_workout_list(db_name: str) -> List:
     response = requests.request("GET", url, headers=headers, data=payload)
 
     return [i['workout_name'] for i in response.json()]
+
+
+def convert_to_aggrid(df: pd.DataFrame) -> AgGridReturn:
+    """
+    Create a
+    :param df:
+    :return:
+    """
+
+    gd = GridOptionsBuilder.from_dataframe(df)
+    gd.configure_selection(selection_mode='single', use_checkbox=True)
+    # gd.configure_pagination(paginationAutoPageSize=True)
+    gridoptions = gd.build()
+
+    return AgGrid(df, gridOptions=gridoptions, key=get_random_string())
+
+
+def get_dvs_client_table(db_name: str, last_name_search: str) -> AgGridReturn:
+    """
+    Get dvs client table as an Aggrid dataframe
+    :param db_name:
+    :return:
+    """
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/dvs_client_table/{db_name}"
+
+    payload = {}
+    headers = {}
+
+    response = requests.request("GET", url, headers=headers, data=payload).json()
+
+    df = pd.DataFrame.from_records(response)
+
+    # Filter based on last_name_search
+    filter_0 = df['client_lastname'].apply(lambda x:x.lower()) == last_name_search.lower()
+
+    df = df.where(filter_0) \
+        .sort_values(['client_lastname'])\
+        .dropna(axis=0, how='all')
+
+    return convert_to_aggrid(df)
+
+
+def get_workout_id_name_dict(db_name: str) -> Dict[int, str]:
+    """
+    Return a workout id name dict based on db_name
+    :param db_name:
+    :return:
+    """
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/workout_id_dict/{db_name}"
+
+    payload = {}
+    headers = {}
+
+    response = requests.request("GET", url, headers=headers, data=payload)
+
+    return response.json()
