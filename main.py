@@ -158,11 +158,11 @@ with st.expander('Edit existing player'):
 
     # Last name condition to display agg table
     if len(last_name_search) != 0:
-        grid_response = get_dvs_client_table(db_connection_name.value, last_name_search)
+        grid_response = get_dvs_client_table(db_connection_name.value, last_name_search, key_=last_name_search)
 
         selected_rows = grid_response['selected_rows']
 
-        if selected_rows:
+        if len(selected_rows) != 0:
             form = st.form(key='edit_player')
             selected_row = selected_rows[0]
             first_name = form.text_input(label="First name*", value=selected_row['client_firstname'])

@@ -1,7 +1,7 @@
 from typing import List, Dict
 
 import pandas as pd
-from st_aggrid import AgGridReturn, GridOptionsBuilder, AgGrid
+from st_aggrid import AgGridReturn, GridOptionsBuilder, AgGrid, GridUpdateMode
 
 import requests
 import random
@@ -114,7 +114,7 @@ def get_workout_list(db_name: str) -> List:
     return [i['workout_name'] for i in response.json()]
 
 
-def convert_to_aggrid(df: pd.DataFrame) -> AgGridReturn:
+def convert_to_aggrid(df: pd.DataFrame, key_:str) -> AgGridReturn:
     """
     Create a
     :param df:
@@ -126,10 +126,12 @@ def convert_to_aggrid(df: pd.DataFrame) -> AgGridReturn:
     # gd.configure_pagination(paginationAutoPageSize=True)
     gridoptions = gd.build()
 
-    return AgGrid(df, gridOptions=gridoptions, key=get_random_string())
+    return AgGrid(df, gridOptions=gridoptions,
+                  update_mode=GridUpdateMode.GRID_CHANGED,
+                  key=key_)
 
 
-def get_dvs_client_table(db_name: str, last_name_search: str) -> AgGridReturn:
+def get_dvs_client_table(db_name: str, last_name_search: str, key_: str) -> AgGridReturn:
     """
     Get dvs client table as an Aggrid dataframe
     :param db_name:
@@ -151,7 +153,7 @@ def get_dvs_client_table(db_name: str, last_name_search: str) -> AgGridReturn:
         .sort_values(['client_lastname'])\
         .dropna(axis=0, how='all')
 
-    return convert_to_aggrid(df)
+    return convert_to_aggrid(df, key_)
 
 
 def get_workout_id_name_dict(db_name: str) -> Dict[int, str]:
