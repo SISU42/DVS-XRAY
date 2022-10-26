@@ -229,7 +229,27 @@ with st.expander('Edit existing player'):
                 else:
                     st.success('Form is successfully submitted')
 
+with st.expander('Add bio and performance data'):
+    if db_connection_name == DB_CONNECTION.FORECAST:
+        st.write('DOES NOT APPLY TO DVS ANALYTICS')
+    else:
+        form_add_bio = st.form(key='add_bio')
+        eval_date = form_add_bio.date_input(label='Eval Date*')
 
+        trainer_list = get_trainer_list(db_connection_name.value)
+        trainer = form_add_bio.selectbox(label="DVS Trainer", options=trainer_list)
+
+        height_in = form_add_bio.text_input(label='Height (in)*')
+        weight_lbs = form_add_bio.text_input(label='Weight (lbs)*')
+        avg_fb_velo = form_add_bio.text_input(label='Avg FB Velo')
+        max_fb_velo = form_add_bio.text_input(label='Max FB Velo')
+        avg_fb_spin_rate = form_add_bio.text_input(label='Avg FB Spin Rate')
+        avg_cb_velo = form_add_bio.text_input(label='Avg CB Velo')
+        avg_cb_spin_rate = form_add_bio.text_input(label='Avg CB Spin Rate')
+
+        st.text('*Required')
+
+        submit_form = form_add_bio.form_submit_button(label='ADD')
 
 # with st.expander('Update bio and performance data'):
 #     grid_response = get_dvs_client_table(db_connection_name.value, "")
