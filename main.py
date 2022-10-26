@@ -263,7 +263,39 @@ with st.expander('Add bio and performance data'):
 
 
 with st.expander('Add range of motion data'):
-    st.text('Add a range of motion data')
+    if db_connection_name == DB_CONNECTION.FORECAST:
+        st.write('DOES NOT APPLY TO DVS ANALYTICS')
+    else:
+        form_add_motion = st.form(key='add_motion')
+        eval_date = form_add_motion.date_input(label='Eval Date*')
+
+        trainer_list = get_trainer_list(db_connection_name.value)
+        trainer = form_add_motion.selectbox(label="DVS Trainer", options=trainer_list)
+
+        d_ir = form_add_motion.text_input(label='D_IR')
+        d_er = form_add_motion.text_input(label='D_ER')
+        nd_ir = form_add_motion.text_input(label='ND_IR')
+        nd_er = form_add_motion.text_input(label='ND_ER')
+        d_tam = form_add_motion.text_input(label='D_TAM')
+        nd_tam = form_add_motion.text_input(label='ND_TAM')
+        d_flex = form_add_motion.text_input(label='D_FLEX')
+        nd_flex = form_add_motion.text_input(label='ND_FLEX')
+        d_cuff_str = form_add_motion.text_input(label='D_CUFF_STR')
+        nd_cuff_str = form_add_motion.text_input(label='ND_CUFF_STR')
+        d_ir_cuff_str = form_add_motion.text_input(label='D_IR_CUFF_STR')
+        d_er_cuff_str = form_add_motion.text_input(label='D_ER_CUFF_STR')
+        nd_ir_cuff_str = form_add_motion.text_input(label='ND_IR_CUFF_STR')
+        nd_er_cuff_str = form_add_motion.text_input(label='ND_ER_CUFF_STR')
+        d_kibler = form_add_motion.text_input(label='D_Kibler')
+        nd_kibler = form_add_motion.text_input(label='ND_Kibler')
+        kibler = form_add_motion.text_input(label='Kibler')
+
+        st.write('*Required')
+
+        submit_form_add_motion = form_add_motion.form_submit_button('SUBMIT')
+
+
+
 
 # Score tab
 
