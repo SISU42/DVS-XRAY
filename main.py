@@ -49,8 +49,8 @@ if add_selectbox != 'None':
     db_connection_name = connect_to_db(add_selectbox)
 
 # Add tabs
-tab_player, tab_score, tab_report, tab_x_ray, tab_compare, tab_logout = st.tabs(
-        ["Player", "Score", "Report", "X-RAY", "Compare", "Logout"])
+tab_player, tab_score, tab_report, tab_x_ray, tab_compare, tab_admin, tab_logout = st.tabs(
+        ["Player", "Score", "Report", "X-RAY", "Compare", "Admin", "Logout"])
 
 
 def check_required_fields(*args):
@@ -66,47 +66,47 @@ def check_required_fields(*args):
 
 
 # Player tab
-with st.expander("Add new player"):
-    with st.form(key="add_new_player"):
-        first_name = st.text_input(label="First name*", value=None)
-        last_name = st.text_input(label="Last name*", value=None)
+with tab_player.expander("Add new player"):
+    form_add_player = st.form(key='Add player')
+    first_name = form_add_player.text_input(label="First name*", value=None)
+    last_name = form_add_player.text_input(label="Last name*", value=None)
 
-        if db_connection_name == DB_CONNECTION.FORECAST:
-            suffix = st.text_input(label="Suffix", value=None)
+    if db_connection_name == DB_CONNECTION.FORECAST:
+        suffix = form_add_player.text_input(label="Suffix", value=None)
 
-        birthdate = st.date_input(label="Birthdate*", value=None)
+    birthdate = form_add_player.date_input(label="Birthdate*", value=None)
 
-        if db_connection_name != DB_CONNECTION.FORECAST:
-            email = st.text_input(label="Email*", value=None)
-            trainer = st.selectbox(label="Trainer*", options=get_trainer_list(db_connection_name.value))
-            facility = st.selectbox(label="Facility*", options=get_facility_list(db_connection_name.value))
-            organization = st.selectbox(label="Organization*", options=get_org_list(db_connection_name.value))
+    if db_connection_name != DB_CONNECTION.FORECAST:
+        email = form_add_player.text_input(label="Email*", value=None)
+        trainer = form_add_player.selectbox(label="Trainer*", options=get_trainer_list(db_connection_name.value))
+        facility = form_add_player.selectbox(label="Facility*", options=get_facility_list(db_connection_name.value))
+        organization = form_add_player.selectbox(label="Organization*", options=get_org_list(db_connection_name.value))
 
-        team = st.selectbox(label="Team*", options=get_team_list(db_connection_name.value))
-        position = st.selectbox(label="Position", options=["Starter", "Reliever"])
-        throws = st.selectbox(label="Throws", options=["Left", "Right"])
+    team = form_add_player.selectbox(label="Team*", options=get_team_list(db_connection_name.value))
+    position = form_add_player.selectbox(label="Position", options=["Starter", "Reliever"])
+    throws = form_add_player.selectbox(label="Throws", options=["Left", "Right"])
 
-        if db_connection_name != DB_CONNECTION.FORECAST:
-            workout = st.selectbox(label="Workout*", options=get_workout_list(db_connection_name.value))
-            phone = st.text_input(label="Phone", value=None, max_chars=10)
+    if db_connection_name != DB_CONNECTION.FORECAST:
+        workout = form_add_player.selectbox(label="Workout*", options=get_workout_list(db_connection_name.value))
+        phone = form_add_player.text_input(label="Phone", value=None, max_chars=10)
+    else:
+        retired = form_add_player.selectbox(label="Retired*", options=['No', 'Yes'])
+        height = form_add_player.text_input(label="Height (in)*", value=None)
+        weight = form_add_player.text_input(label="Weight (lbs)*", value=None)
+        mlbamid = form_add_player.text_input(label="MLBAMID", value=None)
+
+    form_add_player.text('*Required')
+
+    submit_form = form_add_player.form_submit_button(label="SUBMIT")
+
+    if submit_form:
+        req_fields = check_required_fields(first_name, last_name, birthdate,
+                                           email, trainer, facility, organization, team,
+                                           workout)
+        if not req_fields:
+            tab_player.error('All required fields must be entered')
         else:
-            retired = st.selectbox(label="Retired*", options=['No', 'Yes'])
-            height = st.text_input(label="Height (in)*", value=None)
-            weight = st.text_input(label="Weight (lbs)*", value=None)
-            mlbamid = st.text_input(label="MLBAMID", value=None)
-
-        st.text('*Required')
-
-        submit_form = st.form_submit_button(label="SUBMIT")
-
-        if submit_form:
-            req_fields = check_required_fields(first_name, last_name, birthdate,
-                                               email, trainer, facility, organization, team,
-                                               workout)
-            if not req_fields:
-                st.error('All required fields must be entered')
-            else:
-                st.success('Form is successfully submitted')
+            tab_player.success('Form is successfully submitted')
 
 
 def get_index(list_, value_):
@@ -151,7 +151,8 @@ def get_throws(thrw: str) -> Optional[str]:
         return None
 
 
-with st.expander('Edit existing player'):
+with tab_player.expander('Edit existing player'):
+
     # Add a search box
     last_name_search = st.text_input(label="Search by last name: ", max_chars=50)
 
@@ -216,7 +217,7 @@ with st.expander('Edit existing player'):
                 weight_lbs = form.text_input(label='Weight (lbs)*')
                 mlbamid = form.text_input(label='MLBAMID')
 
-            st.text('*Required')
+            tab_player.text('*Required')
 
             submit_form = form.form_submit_button(label="SUBMIT")
 
@@ -229,7 +230,7 @@ with st.expander('Edit existing player'):
                 else:
                     st.success('Form is successfully submitted')
 
-with st.expander('Add bio and performance data'):
+with tab_player.expander('Add bio and performance data'):
     if db_connection_name == DB_CONNECTION.FORECAST:
         st.write('DOES NOT APPLY TO DVS ANALYTICS')
     else:
@@ -251,18 +252,11 @@ with st.expander('Add bio and performance data'):
 
         submit_form = form_add_bio.form_submit_button(label='ADD')
 
-# with st.expander('Update bio and performance data'):
-#     grid_response = get_dvs_client_table(db_connection_name.value, "")
-#     selected_rows = grid_response['selected_rows']
-#
-#     if selected_rows:
-#         form = st.form(key='update_bio')
-#         selected_row = selected_rows[0]
-#         form.text(f"Selected player: {selected_row['client_firstname']} {selected_row['client_lastname']}")
 
 
 
-with st.expander('Add range of motion data'):
+
+with tab_player.expander('Add range of motion data'):
     if db_connection_name == DB_CONNECTION.FORECAST:
         st.write('DOES NOT APPLY TO DVS ANALYTICS')
     else:
@@ -293,8 +287,6 @@ with st.expander('Add range of motion data'):
         st.write('*Required')
 
         submit_form_add_motion = form_add_motion.form_submit_button('SUBMIT')
-
-
 
 
 # Score tab
