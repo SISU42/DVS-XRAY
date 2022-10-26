@@ -288,8 +288,81 @@ with tab_player.expander('Add range of motion data'):
 
         submit_form_add_motion = form_add_motion.form_submit_button('SUBMIT')
 
-
 # Score tab
+with tab_score.expander('Add new DVS Score'):
+    # Add a search box
+    last_name_search = st.text_input(label="Search by last name: ", max_chars=50, key='add_new_score')
+
+    # Last name condition to display agg table
+    if len(last_name_search) != 0:
+        grid_response = get_dvs_client_table(db_connection_name.value, last_name_search, key_=f"{last_name_search}_score")
+
+        selected_rows = grid_response['selected_rows']
+
+        if len(selected_rows) != 0:
+            form_add_score = st.form(key='add_score')
+            selected_row = selected_rows[0]
+
+            score_date = form_add_score.date_input(label='Score date*')
+
+            #TODO Create GET_ANALYST_NAMES API from dvs_analyst
+            dvs_analyst = form_add_score.selectbox(label='DVS Analyst', options=[])
+
+            mm_score = form_add_score.number_input(label='MM_SCORE*')
+            mm_stop = form_add_score.number_input(label='MM_STOP')
+            mm_deg = form_add_score.number_input(label='MM_DEG')
+
+            as_score = form_add_score.number_input(label='AS_SCORE*')
+            as_r = form_add_score.number_input(label='AS_R')
+            as_h = form_add_score.number_input(label='AS_H')
+            as_b = form_add_score.number_input(label='AS_B')
+            as_r_deg = form_add_score.number_input(label='AS_R_DEG')
+            as_h_deg = form_add_score.number_input(label='AS_H_DEG')
+
+            p_score = form_add_score.number_input(label='P_SCORE*')
+            p_flex_deg = form_add_score.number_input(label='P_FLEX_DEG')
+            p_ext_deg = form_add_score.number_input(label='P_EXT_DEG')
+            p_chg_deg = form_add_score.number_input(label='P_CHG_DEG')
+
+            pafs_score = form_add_score.number_input(label='PAFS_SCORE*')
+            pafs_below = form_add_score.number_input(label='PAFS_BELOW')
+            pafs_vert = form_add_score.number_input(label='PAFS_VERT')
+            pafs_spine = form_add_score.number_input(label='PAFS_SPINE')
+            pafs_dir = form_add_score.number_input(label='PAFS_DIR')
+            pafs_vstrike_deg = form_add_score.number_input(label='PAFS_VSTRIKE_DEG')
+            pafs_stretch_deg = form_add_score.number_input(label='PAFS_STRETCH_DEG')
+            pafs_horiz_deg = form_add_score.number_input(label='PAFS_HORIZ_DEG')
+            pafs_vert_deg = form_add_score.number_input(label='PAFS_VERT_DEG')
+
+            paa_score = form_add_score.number_input(label='PAA_SCORE*')
+            paa_bow_deg = form_add_score.number_input(label='PAA_BOW_DEG')
+            paa_deg = form_add_score.number_input(label='PAA_DEG')
+            paa_os = form_add_score.number_input(label='PAA_OS')
+            paa_spine_deg = form_add_score.number_input(label='PAA_SPINE_DEG')
+            paa_chest_deg = form_add_score.number_input(label='PAA_CHEST_DEG')
+            paa_vext_deg = form_add_score.number_input(label='PAA_VEXT_DEG')
+
+            f_score = form_add_score.number_input(label='F_SCORE*')
+            f_bf = form_add_score.number_input(label='F_BF')
+            f_par = form_add_score.number_input(label='F_PAR')
+            f_oh = form_add_score.number_input(label='F_OH')
+            f_hd = form_add_score.number_input(label='F_HD')
+            f_par_deg = form_add_score.number_input(label='F_PAR_DEG')
+            f_oh_deg = form_add_score.number_input(label='F_OH_DEG')
+
+            ap1_score = form_add_score.number_input(label='ap1_score')
+            total_dvs_score = form_add_score.number_input(label='total_dvs_score*')
+
+            form_add_score.write('Required*')
+
+            submit_form_add_score = form_add_score.form_submit_button('SUBMIT')
+
+
+
+
+with tab_score.expander('Edit existing DVS Score'):
+    pass
+
 
 # Report tab
 
