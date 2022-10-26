@@ -152,7 +152,6 @@ def get_throws(thrw: str) -> Optional[str]:
 
 
 with st.expander('Edit existing player'):
-
     # Add a search box
     last_name_search = st.text_input(label="Search by last name: ", max_chars=50)
 
@@ -165,43 +164,57 @@ with st.expander('Edit existing player'):
         if len(selected_rows) != 0:
             form = st.form(key='edit_player')
             selected_row = selected_rows[0]
+
             first_name = form.text_input(label="First name*", value=selected_row['client_firstname'])
             last_name = form.text_input(label="Last name*", value=selected_row['client_lastname'])
+
+            if db_connection_name == DB_CONNECTION.FORECAST:
+                suffix = form.text_input(label="Suffix")
+
             birthdate = form.text_input(label="Birthdate*", value=selected_row['birthday'])
-            email = form.text_input(label="Email*", value=selected_row['client_email'])
 
-            trainer_list = get_trainer_list(db_connection_name.value)
-            trainer = form.selectbox(label="Trainer*", options=trainer_list)
+            if db_connection_name != DB_CONNECTION.FORECAST:
+                email = form.text_input(label="Email*", value=selected_row['client_email'])
 
-            facility_list = get_facility_list(db_connection_name.value)
-            facility = form.selectbox(label="Facility*", index=facility_list.index(selected_row['facility_name']),
-                                    options=facility_list)
+                trainer_list = get_trainer_list(db_connection_name.value)
+                trainer = form.selectbox(label="Trainer*", options=trainer_list)
 
-            organization_list = get_org_list(db_connection_name.value)
-            organization = form.selectbox(label="Organization*",
-                                        index=get_index(organization_list, selected_row['current_organization']),
-                                        options=organization_list)
+                facility_list = get_facility_list(db_connection_name.value)
+                facility = form.selectbox(label="Facility*", index=facility_list.index(selected_row['facility_name']),
+                                          options=facility_list)
+
+                organization_list = get_org_list(db_connection_name.value)
+                organization = form.selectbox(label="Organization*",
+                                              index=get_index(organization_list, selected_row['current_organization']),
+                                              options=organization_list)
 
             team_list = get_team_list(db_connection_name.value)
             team = form.selectbox(label="Team*", index=get_index(team_list, selected_row['current_team']),
-                                options=team_list)
+                                  options=team_list)
 
             db_position = get_postion(selected_row["position"])
             position_list = ["Starter", "Reliever"]
             position = form.selectbox(label="Position", index=get_index(position_list, db_position),
-                                    options=["Starter", "Reliever"])
+                                      options=["Starter", "Reliever"])
 
             db_throws = get_throws(selected_row["throws"])
             throws_list = ["Left", "Right"]
             throws = form.selectbox(label="Throws", index=get_index(throws_list, db_throws), options=["Left", "Right"])
 
-            workout_id_name_dict = get_workout_id_name_dict(db_connection_name.value)
-            workout_list = get_workout_list(db_connection_name.value)
-            workout = form.selectbox(label="Workout*",
-                                   index=get_index(workout_list, workout_id_name_dict[selected_row['workout_id']]),
-                                   options=workout_list)
+            if db_connection_name != DB_CONNECTION.FORECAST:
+                workout_id_name_dict = get_workout_id_name_dict(db_connection_name.value)
+                workout_list = get_workout_list(db_connection_name.value)
+                workout = form.selectbox(label="Workout*",
+                                         index=get_index(workout_list,
+                                                         workout_id_name_dict[selected_row['workout_id']]),
+                                         options=workout_list)
 
-            phone = form.text_input(label="Phone", value=selected_row['client_phone'], max_chars=12)
+                phone = form.text_input(label="Phone", value=selected_row['client_phone'], max_chars=12)
+            else:
+                retired = form.selectbox(label='Retired*', options=['Yes', 'No'])
+                height_in = form.text_input(label='Height (in)*')
+                weight_lbs = form.text_input(label='Weight (lbs)*')
+                mlbamid = form.text_input(label='MLBAMID')
 
             st.text('*Required')
 
