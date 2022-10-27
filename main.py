@@ -1,4 +1,4 @@
-from typing import Union, List, Optional
+from typing import Union, List, Optional, Dict
 
 import streamlit as st
 import pandas as pd
@@ -7,7 +7,7 @@ from st_aggrid import AgGrid, GridOptionsBuilder
 from db_connection import DB_CONNECTION
 
 from api_calls import get_db_status, get_trainer_list, get_facility_list, get_team_list, get_org_list, \
-    get_workout_list, get_dvs_client_table, get_workout_id_name_dict, get_analyst_names
+    get_workout_list, get_dvs_client_table, get_workout_id_name_dict, get_analyst_names, get_dvs_player_table
 
 
 def process_db_status(db_status: Union[int, str]) -> None:
@@ -283,14 +283,34 @@ with tab_player.expander('Add range of motion data'):
 
         submit_form_add_motion = form_add_motion.form_submit_button('SUBMIT')
 
+
 # Score tab
+def get_selected_player_display(raw_dict: Dict, db_connection: DB_CONNECTION) -> str:
+    """
+    Based on the DB_CONNECTION value return selected player to be displayed in the form
+    :param raw_dict:
+    :param db_connection:
+    :return:
+    """
+    if db_connection == DB_CONNECTION.FORECAST:
+        suffix = raw_dict['name_suffix']
+        suffix = suffix if suffix else ""
+        return f"{raw_dict['first_name']} {raw_dict['last_name']} {suffix}"
+    else:
+        return f"{raw_dict['client_firstname']} {raw_dict['client_lastname']}"
+
+
 with tab_score.expander('Add new DVS Score'):
     # Add a search box
     last_name_search = st.text_input(label="Search by last name: ", max_chars=50, key='add_new_score')
 
     # Last name condition to display agg table
     if len(last_name_search) != 0:
-        grid_response = get_dvs_client_table(db_connection_name.value, last_name_search, key_=f"{last_name_search}_score")
+        if db_connection_name != DB_CONNECTION.FORECAST:
+            grid_response = get_dvs_client_table(db_connection_name.value, last_name_search,
+                                                 key_=f"{last_name_search}_score")
+        else:
+            grid_response = get_dvs_player_table(last_name_search, key_=f"{last_name_search}_score")
 
         selected_rows = grid_response['selected_rows']
 
@@ -298,11 +318,14 @@ with tab_score.expander('Add new DVS Score'):
             form_add_score = st.form(key='add_score')
             selected_row = selected_rows[0]
 
+            selected_player = get_selected_player_display(selected_row, db_connection_name)
+            form_add_score.markdown(f"Selected player: {selected_player}")
+
             score_date = form_add_score.date_input(label='Score date*')
 
-            #TODO Create GET_ANALYST_NAMES API from dvs_analyst
-            dvs_analyst = form_add_score.selectbox(label='DVS Analyst',
-                                                   options=get_analyst_names(db_connection_name.value))
+            # TODO Waiting on permissions for dvs_client table on dvs_forecast db
+            # dvs_analyst = form_add_score.selectbox(label='DVS Analyst',
+            #                                        options=get_analyst_names(db_connection_name.value))
 
             mm_score = form_add_score.number_input(label='MM_SCORE*')
             mm_stop = form_add_score.number_input(label='MM_STOP')
@@ -353,12 +376,8 @@ with tab_score.expander('Add new DVS Score'):
 
             submit_form_add_score = form_add_score.form_submit_button('SUBMIT')
 
-
-
-
 with tab_score.expander('Edit existing DVS Score'):
     pass
-
 
 # Report tab
 
