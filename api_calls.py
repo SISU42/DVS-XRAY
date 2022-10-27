@@ -114,7 +114,7 @@ def get_workout_list(db_name: str) -> List:
     return [i['workout_name'] for i in response.json()]
 
 
-def convert_to_aggrid(df: pd.DataFrame, key_:str) -> AgGridReturn:
+def convert_to_aggrid(df: pd.DataFrame, key_: str) -> AgGridReturn:
     """
     Create a
     :param df:
@@ -147,10 +147,10 @@ def get_dvs_client_table(db_name: str, last_name_search: str, key_: str) -> AgGr
     df = pd.DataFrame.from_records(response)
 
     # Filter based on last_name_search
-    filter_0 = df['client_lastname'].apply(lambda x:x.lower()) == last_name_search.lower()
+    filter_0 = df['client_lastname'].apply(lambda x: x.lower()) == last_name_search.lower()
 
     df = df.where(filter_0) \
-        .sort_values(['client_lastname'])\
+        .sort_values(['client_lastname']) \
         .dropna(axis=0, how='all')
 
     return convert_to_aggrid(df, key_)
@@ -170,3 +170,19 @@ def get_workout_id_name_dict(db_name: str) -> Dict[int, str]:
     response = requests.request("GET", url, headers=headers, data=payload)
 
     return response.json()
+
+
+def get_analyst_names(db_name: str) -> List[str]:
+    """
+    Based on db_name return unique analyst names and ids
+    :param db_name:
+    :return:
+    """
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/analyst_names/{db_name}"
+
+    payload = {}
+    headers = {}
+
+    response = requests.request("GET", url, headers=headers, data=payload).json()
+
+    return [f"{i['dvs_analyst_id']}: {i['analyst_name']}" for i in response]

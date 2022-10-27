@@ -7,7 +7,7 @@ from st_aggrid import AgGrid, GridOptionsBuilder
 from db_connection import DB_CONNECTION
 
 from api_calls import get_db_status, get_trainer_list, get_facility_list, get_team_list, get_org_list, \
-    get_workout_list, get_dvs_client_table, get_workout_id_name_dict
+    get_workout_list, get_dvs_client_table, get_workout_id_name_dict, get_analyst_names
 
 
 def process_db_status(db_status: Union[int, str]) -> None:
@@ -152,7 +152,6 @@ def get_throws(thrw: str) -> Optional[str]:
 
 
 with tab_player.expander('Edit existing player'):
-
     # Add a search box
     last_name_search = st.text_input(label="Search by last name: ", max_chars=50)
 
@@ -252,10 +251,6 @@ with tab_player.expander('Add bio and performance data'):
 
         submit_form = form_add_bio.form_submit_button(label='ADD')
 
-
-
-
-
 with tab_player.expander('Add range of motion data'):
     if db_connection_name == DB_CONNECTION.FORECAST:
         st.write('DOES NOT APPLY TO DVS ANALYTICS')
@@ -306,7 +301,8 @@ with tab_score.expander('Add new DVS Score'):
             score_date = form_add_score.date_input(label='Score date*')
 
             #TODO Create GET_ANALYST_NAMES API from dvs_analyst
-            dvs_analyst = form_add_score.selectbox(label='DVS Analyst', options=[])
+            dvs_analyst = form_add_score.selectbox(label='DVS Analyst',
+                                                   options=get_analyst_names(db_connection_name.value))
 
             mm_score = form_add_score.number_input(label='MM_SCORE*')
             mm_stop = form_add_score.number_input(label='MM_STOP')
