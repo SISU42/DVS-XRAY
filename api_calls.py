@@ -6,6 +6,12 @@ from st_aggrid import AgGridReturn, GridOptionsBuilder, AgGrid, GridUpdateMode
 import requests
 import random
 
+from db_connection import DB_CONNECTION
+
+
+MLB_TEAMS = ['SEA', 'WAS', 'BAL', 'CLE', 'ANA', 'NYN', 'SDN', 'TEX', 'ARI', 'CHA', 'HOU', 'MIL', 'PHI', 'SLN', 'BOS',
+             'COL', 'LAN', 'NYA', 'SFN', 'TOR', 'ATL', 'CIN', 'KCA', 'MIN', 'PIT', 'TBA', 'CHN', 'DET', 'MIA', 'OAK']
+
 
 def get_random_string() -> str:
     corpus = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -66,16 +72,19 @@ def get_team_list(db_name: str) -> List:
     :param db_name:
     :return:
     """
-    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/team_list/{db_name}"
+    if db_name == DB_CONNECTION.FORECAST.value:
+        return MLB_TEAMS
+    else:
+        url = f"https://deliveryvaluesystemapidev.azurewebsites.net/team_list/{db_name}"
 
-    payload = {}
-    headers = {
-        'access_token': 'dv$2022'
-    }
+        payload = {}
+        headers = {
+            'access_token': 'dv$2022'
+        }
 
-    response = requests.request("GET", url, headers=headers, data=payload)
+        response = requests.request("GET", url, headers=headers, data=payload)
 
-    return [f"{i['team_id']} - {i['team_name']}" for i in response.json()]
+        return [f"{i['team_id']} - {i['team_name']}" for i in response.json()]
 
 
 def get_org_list(db_name: str) -> List:
@@ -151,6 +160,32 @@ def get_dvs_client_table(db_name: str, last_name_search: str, key_: str) -> AgGr
 
     df = df.where(filter_0) \
         .sort_values(['client_lastname']) \
+        .dropna(axis=0, how='all')
+
+    return convert_to_aggrid(df, key_)
+
+
+def get_dvs_player_table(last_name_search: str, key_: str) -> AgGridReturn:
+    """
+    Same functionality as dvs_client but for forecaster db on dvs_player
+    :param last_name_search:
+    :param key_:
+    :return:
+    """
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/dvs_player_table/"
+
+    payload = {}
+    headers = {}
+
+    response = requests.request("GET", url, headers=headers, data=payload).json()
+
+    df = pd.DataFrame.from_records(response)
+
+    # Filter based on last_name_search
+    filter_0 = df['last_name'].apply(lambda x: x.lower()) == last_name_search.lower()
+
+    df = df.where(filter_0) \
+        .sort_values(['last_name']) \
         .dropna(axis=0, how='all')
 
     return convert_to_aggrid(df, key_)
