@@ -304,7 +304,7 @@ with tab_score.expander('Add new DVS Score'):
     # Add a search box
     last_name_search = st.text_input(label="Search by last name: ", max_chars=50, key='add_new_score')
 
-    # Last name condition to display agg table
+    # Last name condition to display agg table - forecast db fetches data from dvs_player, others from dvs_client
     if len(last_name_search) != 0:
         if db_connection_name != DB_CONNECTION.FORECAST:
             grid_response = get_dvs_client_table(db_connection_name.value, last_name_search,
@@ -380,9 +380,13 @@ with tab_score.expander('Edit existing DVS Score'):
     pass
 
 # Report tab
-
+with tab_report:
+    st.markdown("This feature is under development.")
 # X-RAY tab
 
+
 # Compare tab
+with tab_compare:
+    st.markdown("This feature is under development.")
 
 # Logout tab
