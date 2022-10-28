@@ -512,6 +512,8 @@ with tab_admin:
             facility = form_add_trainer_admin.text_input(label='Facility*')
             phone = form_add_trainer_admin.text_input(label='Phone')
 
+            form_add_trainer_admin.markdown('*Required')
+
             form_add_trainer_admin.form_submit_button(label='SUBMIT')
 
         with tab_admin.expander('Edit existing trainer'):
@@ -527,7 +529,7 @@ with tab_admin:
             country = form_add_facility_admin.text_input(label='Country')
             post_code = form_add_facility_admin.text_input(label='Post code')
 
-            tab_admin.markdown('*Required')
+            form_add_facility_admin.markdown('*Required')
 
             form_add_facility_admin.form_submit_button(label='SUBMIT')
 
@@ -548,14 +550,33 @@ with tab_admin:
             website = form_add_org_admin.text_input(label='Website')
 
             form_add_org_admin.markdown('*Required')
-
-            tab_admin.markdown('*Required')
             form_add_org_admin.form_submit_button(label='SUBMIT')
+
         with tab_admin.expander('Edit existing organization'):
             pass
 
         with tab_admin.expander('Add team'):
-            pass
+            form_add_team_admin = st.form(key='add_team_admin')
+            organization_name_ = form_add_team_admin.selectbox(label='Organization*',
+                                                               options=get_org_list(db_connection_name.value))
+            team_name = form_add_team_admin.text_input(label='Team name')
+            team_address = form_add_team_admin.text_input(label='Address')
+            team_city = form_add_team_admin.text_input(label='City')
+            team_state = form_add_team_admin.text_input(label='State')
+            team_postcode = form_add_team_admin.text_input(label='Postcode')
+            team_country = form_add_team_admin.text_input(label='Country')
+            team_phone = form_add_team_admin.text_input(label='Phone')
+            team_email = form_add_team_admin.text_input(label='Email')
+            team_website = form_add_team_admin.text_input(label='Website')
+            team_facility = form_add_team_admin.selectbox(label='Facility',
+                                                          options=get_facility_list(db_connection_name.value))
+            team_trainer = form_add_team_admin.selectbox(label='Trainer',
+                                                         options=get_trainer_list(db_connection_name.value))
+
+            form_add_team_admin.markdown('*Required')
+            form_add_team_admin.form_submit_button(label='SUBMIT')
+
+
 
         with tab_admin.expander('Edit existing team'):
             pass
