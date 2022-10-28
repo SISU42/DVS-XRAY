@@ -379,7 +379,7 @@ with tab_score.expander('Add new DVS Score'):
             submit_form_add_score = form_add_score.form_submit_button('SUBMIT')
 
 
-def get_client_player_id(db_connection_name: DB_CONNECTION, selected_row:Dict) -> int:
+def get_client_player_id(db_connection_name: DB_CONNECTION, selected_row: Dict) -> int:
     """
     Based on the database, get player_id or client_id
     :param db_connection_name:
@@ -398,8 +398,7 @@ def replace_none(raw_dict: Dict) -> Dict:
     :param raw_dict:
     :return:
     """
-    return {k:-1 if not v else v for k,v in raw_dict.items()}
-
+    return {k: -1 if not v else v for k, v in raw_dict.items()}
 
 
 with tab_score.expander('Edit existing DVS Score'):
@@ -496,10 +495,6 @@ with tab_score.expander('Edit existing DVS Score'):
 
                 submit_form_add_score = form_edit_score.form_submit_button('SUBMIT')
 
-
-
-
-
         # form_edit_score = st.form(key='edit_score')
         #
         # score_date = form_edit_score.date_input(label='Score date*', value=grid_response_score['score_date'])
@@ -539,6 +534,31 @@ with tab_admin:
         with tab_admin.expander('Edit existing facility'):
             pass
 
+        with tab_admin.expander('Add organinzation'):
+            form_add_org_admin = st.form(key='add_organization_admin')
+            name = form_add_org_admin.text_input(label='Name*')
+            address_ = form_add_org_admin.text_input(label='Address')
+            city_ = form_add_org_admin.text_input(label='City')
+            state_ = form_add_org_admin.text_input(label='State')
+            postcode_ = form_add_org_admin.text_input(label='Postcode')
+            country_ = form_add_org_admin.text_input(label='Country')
+            president = form_add_org_admin.text_input(label='President')
+            phone__ = form_add_org_admin.text_input(label='Phone')
+            email__ = form_add_org_admin.text_input(label='Email')
+            website = form_add_org_admin.text_input(label='Website')
+
+            form_add_org_admin.markdown('*Required')
+
+            tab_admin.markdown('*Required')
+            form_add_org_admin.form_submit_button(label='SUBMIT')
+        with tab_admin.expander('Edit existing organization'):
+            pass
+
+        with tab_admin.expander('Add team'):
+            pass
+
+        with tab_admin.expander('Edit existing team'):
+            pass
 
 # Report tab
 with tab_report:
