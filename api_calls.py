@@ -221,3 +221,26 @@ def get_analyst_names(db_name: str) -> List[str]:
     response = requests.request("GET", url, headers=headers, data=payload).json()
 
     return [f"{i['dvs_analyst_id']}: {i['analyst_name']}" for i in response]
+
+
+def get_dvs_score(db_name: str, client_id: int, key_: str) -> AgGridReturn:
+    """
+    Get the agg grid table of scores from dvs_score
+    :param key_:
+    :param db_name:
+    :param client_id:
+    :return:
+    """
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/dvs_scores/{db_name}/{client_id}"
+
+    payload = {}
+    headers = {}
+
+    response = requests.request("GET", url, headers=headers, data=payload).json()
+
+    df = pd.DataFrame.from_records(response)
+
+    df = df.sort_values(['score_date'], ascending=False) \
+        .dropna(axis=0, how='all')
+
+    return convert_to_aggrid(df, key_)
