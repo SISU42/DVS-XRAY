@@ -504,6 +504,40 @@ with tab_score.expander('Edit existing DVS Score'):
         #
         # score_date = form_edit_score.date_input(label='Score date*', value=grid_response_score['score_date'])
 
+# Admin tab
+with tab_admin:
+    if db_connection_name == DB_CONNECTION.FORECAST:
+        st.markdown('Does not apply to *DVS Analytics*')
+    else:
+        with tab_admin.expander('Add trainer'):
+            form_add_trainer_admin = st.form(key='add_trainer_admin')
+            first_name = form_add_trainer_admin.text_input(label='First name*')
+            last_name = form_add_trainer_admin.text_input(label='Last name*')
+            email = form_add_trainer_admin.text_input(label='Email')
+            facility = form_add_trainer_admin.text_input(label='Facility*')
+            phone = form_add_trainer_admin.text_input(label='Phone')
+
+            form_add_trainer_admin.form_submit_button(label='SUBMIT')
+
+        with tab_admin.expander('Edit existing trainer'):
+            pass
+
+        with tab_admin.expander('Add facility'):
+            form_add_facility_admin = st.form(key='add_facility_admin')
+            facility_name = form_add_facility_admin.text_input(label='Facility name*')
+            phone_ = form_add_facility_admin.text_input(label='Phone')
+            address = form_add_facility_admin.text_input(label='Address')
+            city = form_add_facility_admin.text_input(label='City')
+            state = form_add_facility_admin.text_input(label='State')
+            country = form_add_facility_admin.text_input(label='Country')
+            post_code = form_add_facility_admin.text_input(label='Post code')
+
+            tab_admin.markdown('*Required')
+
+            form_add_facility_admin.form_submit_button(label='SUBMIT')
+
+        with tab_admin.expander('Edit existing facility'):
+            pass
 
 
 # Report tab
