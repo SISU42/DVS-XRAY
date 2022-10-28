@@ -244,3 +244,5 @@ def get_dvs_score(db_name: str, client_id: int, key_: str) -> AgGridReturn:
         .dropna(axis=0, how='all')
 
     return convert_to_aggrid(df, key_)
+
+
