@@ -5,3 +5,4 @@ class DB_CONNECTION(Enum):
     FORECAST = "forecast"
     MAYO = "mayo"
     PROD = "prod"
+    DEV = "dev"

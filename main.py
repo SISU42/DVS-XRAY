@@ -32,6 +32,9 @@ def connect_to_db(db_name: str) -> Union[None, DB_CONNECTION]:
     elif db_name == "Mayo Clinic":
         db_name_ = DB_CONNECTION.MAYO
         db_status = get_db_status(db_name_.value)
+    elif db_name == "DVS Dev":
+        db_name_ = DB_CONNECTION.DEV
+        db_status = get_db_status(db_name_.value)
     else:
         return None
 
@@ -43,7 +46,7 @@ def connect_to_db(db_name: str) -> Union[None, DB_CONNECTION]:
 # Sidebar selection
 add_selectbox = st.sidebar.selectbox(
         "Select DB: ",
-        ("None", "DVS Analytics", "DVS Training", "Mayo Clinic")
+        ("DVS Dev", "DVS Analytics", "DVS Training", "Mayo Clinic")
 )
 
 db_connection_name = None
