@@ -7,9 +7,11 @@ from st_aggrid import AgGrid, GridOptionsBuilder
 
 from db_connection import DB_CONNECTION
 
+from payloads import Insert_player_payload_non_forecast
+
 from api_calls import get_db_status, get_trainer_list, get_facility_list, get_team_list, get_org_list, \
     get_workout_list, get_dvs_client_table, get_workout_id_name_dict, get_analyst_names, get_dvs_player_table, \
-    get_dvs_score
+    get_dvs_score, check_duplicates, generate_primary_key, add_player_to_db
 
 
 def process_db_status(db_status: Union[int, str]) -> None:
@@ -70,9 +72,37 @@ def check_required_fields(*args):
         return 1
 
 
+def submit_player_to_add(db_name: str, pk: str, payload_object: Insert_player_payload_non_forecast) -> bool:
+    # Generate primary key
+    pk_to_insert = generate_primary_key(pk, db_name)
+
+    if pk_to_insert == -1:
+        st.error('Cannot insert this player into DB. There was an error while generating a primary key')
+        st.stop()
+
+    # Perform the insert
+    add_player_to_db(db_name=db_name, pk=pk_to_insert, payload=payload_object)
+
+    return True
+
+
 # Player tab
+def get_workout_id_from_workout(workout: str) -> int:
+    """
+    Return a workout id based on workout. Choose the first workout_id for a given workout name
+    :param workout:
+    :return:
+    """
+    workout_dict = {
+        'Rookie': 1,
+        'A': 7,
+        'AA': 16
+    }
+    return workout_dict[workout]
+
+
 with tab_player.expander("Add new player"):
-    form_add_player = st.form(key='Add player')
+    form_add_player = st.form(key='Add player', clear_on_submit=True)
     first_name = form_add_player.text_input(label="First name*", value=None)
     last_name = form_add_player.text_input(label="Last name*", value=None)
 
@@ -80,6 +110,8 @@ with tab_player.expander("Add new player"):
         suffix = form_add_player.text_input(label="Suffix", value=None)
 
     birthdate = form_add_player.date_input(label="Birthdate*", value=None)
+    birthyear = int(birthdate.year)
+    birthdate = birthdate.strftime('%Y-%m-%d')
 
     if db_connection_name != DB_CONNECTION.FORECAST:
         email = form_add_player.text_input(label="Email*", value=None)
@@ -93,6 +125,7 @@ with tab_player.expander("Add new player"):
 
     if db_connection_name != DB_CONNECTION.FORECAST:
         workout = form_add_player.selectbox(label="Workout*", options=get_workout_list(db_connection_name.value))
+        workout_id = get_workout_id_from_workout(workout)
         phone = form_add_player.text_input(label="Phone", value=None, max_chars=10)
     else:
         retired = form_add_player.selectbox(label="Retired*", options=['No', 'Yes'])
@@ -105,13 +138,39 @@ with tab_player.expander("Add new player"):
     submit_form = form_add_player.form_submit_button(label="SUBMIT")
 
     if submit_form:
+        # Check if all required fields are entered
         req_fields = check_required_fields(first_name, last_name, birthdate,
                                            email, trainer, facility, organization, team,
                                            workout)
+
+        # Check for required fields
         if not req_fields:
             tab_player.error('All required fields must be entered')
-        else:
-            tab_player.success('Form is successfully submitted')
+            st.stop()
+
+        # Check if player exists by checking birthday, first_name, last_name
+        duplicate_check = check_duplicates(db_connection_name.value, birthdate, first_name, last_name)
+        if not duplicate_check:
+            tab_player.error('This player exists in the database')
+            st.stop()
+
+        # Submit to DB
+        if db_connection_name != DB_CONNECTION.FORECAST:
+            # Create a non forecast payload object
+            add_player_object = Insert_player_payload_non_forecast(client_firstname=first_name,
+                                                                   client_lastname=last_name, throws=throws[0],
+                                                                   birthday=birthdate, birthyear=birthyear,
+                                                                   workout_id=workout_id, position=position[0],
+                                                                   current_organization=organization[3:],
+                                                                   dvs_trainer_id=int(trainer[0]),
+                                                                   dvs_facility_id=int(facility[0]), current_team=team,
+                                                                   client_email=email, client_phone=phone,
+                                                                   org_id=organization[0], team_id=team[0])
+            submit_player_to_add(db_connection_name.value, 'dvs_client_id', payload_object=add_player_object)
+            st.success(f"Added player to {db_connection_name.value}")
+
+        # else:
+        #     # Create a forecast payload object
 
 
 def get_index(list_, value_):
@@ -578,8 +637,6 @@ with tab_admin:
 
             form_add_team_admin.markdown('*Required')
             form_add_team_admin.form_submit_button(label='SUBMIT')
-
-
 
         with tab_admin.expander('Edit existing team'):
             pass

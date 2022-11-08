@@ -5,9 +5,11 @@ from st_aggrid import AgGridReturn, GridOptionsBuilder, AgGrid, GridUpdateMode
 
 import requests
 import random
+import json
 
 from db_connection import DB_CONNECTION
 
+from payloads import Insert_player_payload_non_forecast
 
 MLB_TEAMS = ['SEA', 'WAS', 'BAL', 'CLE', 'ANA', 'NYN', 'SDN', 'TEX', 'ARI', 'CHA', 'HOU', 'MIL', 'PHI', 'SLN', 'BOS',
              'COL', 'LAN', 'NYA', 'SFN', 'TOR', 'ATL', 'CIN', 'KCA', 'MIN', 'PIT', 'TBA', 'CHN', 'DET', 'MIA', 'OAK']
@@ -54,7 +56,7 @@ def get_facility_list(db_name: str) -> List:
     :param db_name:
     :return:
     """
-    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/facility_list/{db_name}"
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/facility_names_list/{db_name}"
 
     payload = {}
     headers = {
@@ -102,7 +104,7 @@ def get_org_list(db_name: str) -> List:
 
     response = requests.request("GET", url, headers=headers, data=payload)
 
-    return [f"{i['org_name']}" for i in response.json()]
+    return [f"{i['org_id']} - {i['org_name']}" for i in response.json()]
 
 
 def get_workout_list(db_name: str) -> List:
@@ -246,3 +248,64 @@ def get_dvs_score(db_name: str, client_id: int, key_: str) -> AgGridReturn:
     return convert_to_aggrid(df, key_)
 
 
+def check_duplicates(db_name: str, birthday: str, first_name: str, last_name: str) -> bool:
+    """
+    Checks if duplcates exist and returns a boolean according to the condition
+    :param db_name:
+    :param birthday:
+    :param first_name:
+    :param last_name:
+    :return:
+    """
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/check_dup_clients/{db_name}/" \
+          f"{birthday}/{first_name}/{last_name}"
+
+    payload = {}
+    headers = {}
+
+    response = requests.request("GET", url, headers=headers, data=payload).json()
+
+    if response == -1:
+        return True
+    else:
+        return False
+
+
+def generate_primary_key(pk: str, db_name: str) -> int:
+    """
+    Generate a primary key for the client/player tables
+    :param pk:
+    :param db_name:
+    :return:
+    """
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/max_pk/{pk}/{db_name}"
+
+    payload = {}
+    headers = {}
+
+    response = requests.request("GET", url, headers=headers, data=payload).json()
+
+    if response == -1:
+        return -1
+    else:
+        return int(response) + 1
+
+
+def add_player_to_db(db_name: str, pk: int, payload: Insert_player_payload_non_forecast) -> None:
+    """
+    Add a player to the db
+    :param payload:
+    :param db_name:
+    :param pk:
+    :return:
+    """
+
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/insert_into_dvs_client/{pk}/{db_name}"
+
+    headers = {
+        'Content-Type': 'application/json',
+    }
+
+    response = requests.request("POST", url, headers=headers, data=json.dumps(payload.__dict__))
+
+    return None
