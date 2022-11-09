@@ -1,6 +1,7 @@
 from typing import Union, List, Optional, Dict
 from datetime import datetime
 
+import re
 import streamlit as st
 import pandas as pd
 from st_aggrid import AgGrid, GridOptionsBuilder
@@ -9,7 +10,7 @@ from db_connection import DB_CONNECTION
 
 from payloads import Insert_player_payload_non_forecast
 
-from api_calls import get_db_status, get_trainer_list, get_facility_list, get_team_list, get_org_list, \
+from api_calls import get_db_status, get_trainer_dict, get_facility_dict, get_team_dict, get_org_dict, \
     get_workout_list, get_dvs_client_table, get_workout_id_name_dict, get_analyst_names, get_dvs_player_table, \
     get_dvs_score, check_duplicates, generate_primary_key, add_player_to_db
 
@@ -59,6 +60,19 @@ if add_selectbox != 'None':
 tab_player, tab_score, tab_report, tab_x_ray, tab_compare, tab_admin, tab_logout = st.tabs(
         ["Player", "Score", "Report", "X-RAY", "Compare", "Admin", "Logout"])
 
+# Init setup
+# Facility dict
+facility_dict = get_facility_dict(db_connection_name.value)
+
+# Trainer dict
+trainer_dict = get_trainer_dict(db_connection_name.value)
+
+# Team dict
+team_dict = get_team_dict(db_connection_name.value)
+
+# Organization dict
+organization_dict = get_org_dict(db_connection_name.value)
+
 
 def check_required_fields(*args):
     """
@@ -67,6 +81,8 @@ def check_required_fields(*args):
     :return:
     """
     if 'None' in args:
+        return 0
+    elif "" in args:
         return 0
     else:
         return 1
@@ -95,8 +111,8 @@ def get_workout_id_from_workout(workout: str) -> int:
     """
     workout_dict = {
         'Rookie': 1,
-        'A': 7,
-        'AA': 16
+        'A'     : 7,
+        'AA'    : 16
     }
     return workout_dict[workout]
 
@@ -115,11 +131,11 @@ with tab_player.expander("Add new player"):
 
     if db_connection_name != DB_CONNECTION.FORECAST:
         email = form_add_player.text_input(label="Email*", value=None)
-        trainer = form_add_player.selectbox(label="Trainer*", options=get_trainer_list(db_connection_name.value))
-        facility = form_add_player.selectbox(label="Facility*", options=get_facility_list(db_connection_name.value))
-        organization = form_add_player.selectbox(label="Organization*", options=get_org_list(db_connection_name.value))
+        trainer = form_add_player.selectbox(label="Trainer*", options=list(trainer_dict.values()))
+        facility = form_add_player.selectbox(label="Facility*", options=list(facility_dict.values()))
+        organization = form_add_player.selectbox(label="Organization*", options=list(organization_dict.values()))
 
-    team = form_add_player.selectbox(label="Team*", options=get_team_list(db_connection_name.value))
+    team = form_add_player.selectbox(label="Team*", options=list(team_dict.values()))
     position = form_add_player.selectbox(label="Position", options=["Starter", "Reliever"])
     throws = form_add_player.selectbox(label="Throws", options=["Left", "Right"])
 
@@ -215,6 +231,20 @@ def get_throws(thrw: str) -> Optional[str]:
         return None
 
 
+def strip_id_from_name(str_: str) -> Optional[str]:
+    """
+    Removes the preceding id from the id-val combination
+    :param str_:
+    :return:
+    """
+    pattern = re.compile(r"([\d]+) - (.*)")
+    search_ = pattern.search(str_)
+    if search_:
+        return search_.group(2)
+    else:
+        return None
+
+
 with tab_player.expander('Edit existing player'):
     # Add a search box
     last_name_search = st.text_input(label="Search by last name: ", max_chars=50)
@@ -235,24 +265,25 @@ with tab_player.expander('Edit existing player'):
             if db_connection_name == DB_CONNECTION.FORECAST:
                 suffix = form.text_input(label="Suffix")
 
-            birthdate = form.text_input(label="Birthdate*", value=selected_row['birthday'])
+            birthdate = form.date_input(label="Birthdate*", value=datetime.fromisoformat(selected_row['birthday']))
 
             if db_connection_name != DB_CONNECTION.FORECAST:
                 email = form.text_input(label="Email*", value=selected_row['client_email'])
 
-                trainer_list = get_trainer_list(db_connection_name.value)
-                trainer = form.selectbox(label="Trainer*", options=trainer_list)
+                trainer_list = list(trainer_dict.values())
+                trainer = form.selectbox(label="Trainer*", index=trainer_list.index(selected_row['trainer_name']),
+                                         options=trainer_list)
 
-                facility_list = get_facility_list(db_connection_name.value)
+                facility_list = list(facility_dict.values())
                 facility = form.selectbox(label="Facility*", index=facility_list.index(selected_row['facility_name']),
                                           options=facility_list)
 
-                organization_list = get_org_list(db_connection_name.value)
+                organization_list = list(organization_dict.values())
                 organization = form.selectbox(label="Organization*",
                                               index=get_index(organization_list, selected_row['current_organization']),
                                               options=organization_list)
 
-            team_list = get_team_list(db_connection_name.value)
+            team_list = list(team_dict.values())
             team = form.selectbox(label="Team*", index=get_index(team_list, selected_row['current_team']),
                                   options=team_list)
 
@@ -290,30 +321,56 @@ with tab_player.expander('Edit existing player'):
                                                    workout)
                 if not req_fields:
                     st.error('All required fields must be entered')
-                else:
-                    st.success('Form is successfully submitted')
+                    st.stop()
+
+                # Check if player exists by checking birthday, first_name, last_name
+                duplicate_check = check_duplicates(db_connection_name.value, birthdate, first_name, last_name)
+                if not duplicate_check:
+                    tab_player.error('This player exists in the database')
+                    st.stop()
+
+                # Update db
 
 with tab_player.expander('Add bio and performance data'):
     if db_connection_name == DB_CONNECTION.FORECAST:
         st.write('DOES NOT APPLY TO DVS ANALYTICS')
     else:
-        form_add_bio = st.form(key='add_bio')
-        eval_date = form_add_bio.date_input(label='Eval Date*')
+        # Add a search box
+        last_name_search = st.text_input(label="Search by last name: ", max_chars=50,
+                                         key='Add bio and performance data')
 
-        trainer_list = get_trainer_list(db_connection_name.value)
-        trainer = form_add_bio.selectbox(label="DVS Trainer", options=trainer_list)
+        # Last name condition to display agg table
+        if len(last_name_search) != 0:
+            grid_response = get_dvs_client_table(db_connection_name.value, last_name_search, key_=last_name_search)
+            selected_rows = grid_response['selected_rows']
 
-        height_in = form_add_bio.text_input(label='Height (in)*')
-        weight_lbs = form_add_bio.text_input(label='Weight (lbs)*')
-        avg_fb_velo = form_add_bio.text_input(label='Avg FB Velo')
-        max_fb_velo = form_add_bio.text_input(label='Max FB Velo')
-        avg_fb_spin_rate = form_add_bio.text_input(label='Avg FB Spin Rate')
-        avg_cb_velo = form_add_bio.text_input(label='Avg CB Velo')
-        avg_cb_spin_rate = form_add_bio.text_input(label='Avg CB Spin Rate')
+            if len(selected_rows) != 0:
+                form_add_bio = st.form(key='add_bio')
+                eval_date = form_add_bio.date_input(label='Eval Date*')
 
-        st.text('*Required')
+                trainer_list = list(trainer_dict.values())
+                trainer = form_add_bio.selectbox(label="DVS Trainer", options=trainer_list)
 
-        submit_form = form_add_bio.form_submit_button(label='ADD')
+                height_in = form_add_bio.text_input(label='Height (in)*')
+                weight_lbs = form_add_bio.text_input(label='Weight (lbs)*')
+                avg_fb_velo = form_add_bio.text_input(label='Avg FB Velo')
+                max_fb_velo = form_add_bio.text_input(label='Max FB Velo')
+                avg_fb_spin_rate = form_add_bio.text_input(label='Avg FB Spin Rate')
+                avg_cb_velo = form_add_bio.text_input(label='Avg CB Velo')
+                avg_cb_spin_rate = form_add_bio.text_input(label='Avg CB Spin Rate')
+
+                st.text('*Required')
+
+                submit_form = form_add_bio.form_submit_button(label='ADD')
+
+                if submit_form:
+                    # Check if all required fields are entered
+                    req_fields = check_required_fields(eval_date, height_in, weight_lbs)
+
+                    # Check for required fields
+                    if not req_fields:
+                        tab_player.error('All required fields must be entered')
+                        st.stop()
 
 with tab_player.expander('Add range of motion data'):
     if db_connection_name == DB_CONNECTION.FORECAST:
@@ -322,7 +379,7 @@ with tab_player.expander('Add range of motion data'):
         form_add_motion = st.form(key='add_motion')
         eval_date = form_add_motion.date_input(label='Eval Date*')
 
-        trainer_list = get_trainer_list(db_connection_name.value)
+        trainer_list = list(trainer_dict.values())
         trainer = form_add_motion.selectbox(label="DVS Trainer", options=trainer_list)
 
         d_ir = form_add_motion.text_input(label='D_IR')
@@ -620,7 +677,7 @@ with tab_admin:
         with tab_admin.expander('Add team'):
             form_add_team_admin = st.form(key='add_team_admin')
             organization_name_ = form_add_team_admin.selectbox(label='Organization*',
-                                                               options=get_org_list(db_connection_name.value))
+                                                               options=get_org_dict(db_connection_name.value))
             team_name = form_add_team_admin.text_input(label='Team name')
             team_address = form_add_team_admin.text_input(label='Address')
             team_city = form_add_team_admin.text_input(label='City')
@@ -631,9 +688,9 @@ with tab_admin:
             team_email = form_add_team_admin.text_input(label='Email')
             team_website = form_add_team_admin.text_input(label='Website')
             team_facility = form_add_team_admin.selectbox(label='Facility',
-                                                          options=get_facility_list(db_connection_name.value))
+                                                          options=list(team_dict.values()))
             team_trainer = form_add_team_admin.selectbox(label='Trainer',
-                                                         options=get_trainer_list(db_connection_name.value))
+                                                         options=list(team_dict.values()))
 
             form_add_team_admin.markdown('*Required')
             form_add_team_admin.form_submit_button(label='SUBMIT')

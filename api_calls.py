@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Union, Any
 
 import pandas as pd
 from st_aggrid import AgGridReturn, GridOptionsBuilder, AgGrid, GridUpdateMode
@@ -34,7 +34,7 @@ def get_db_status(db_name: str) -> str:
     return response.text
 
 
-def get_trainer_list(db_name: str) -> List:
+def get_trainer_dict(db_name: str) -> Dict[int, str]:
     """
     Get all the trainers list based on db_name
     :param db_name:
@@ -47,16 +47,16 @@ def get_trainer_list(db_name: str) -> List:
     }
     payload = {}
     response = requests.request("GET", url, headers=headers, data=payload)
-    return [f"{i['dvs_trainer_id']} - {i['trainer_firstname']} - {i['trainer_lastname']}" for i in response.json()]
+    return {int(i['dvs_trainer_id']): f"{i['trainer_firstname']} {i['trainer_lastname']}" for i in response.json()}
 
 
-def get_facility_list(db_name: str) -> List:
+def get_facility_dict(db_name: str) -> Dict[int, str]:
     """
     Get all the facility names list based on the db_name
     :param db_name:
     :return:
     """
-    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/facility_names_list/{db_name}"
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/facility_list/{db_name}"
 
     payload = {}
     headers = {
@@ -65,10 +65,10 @@ def get_facility_list(db_name: str) -> List:
 
     response = requests.request("GET", url, headers=headers, data=payload)
 
-    return [f"{i['facility_name']}" for i in response.json()]
+    return {int(i['dvs_facility_id']): f"{i['facility_name']}" for i in response.json()}
 
 
-def get_team_list(db_name: str) -> List:
+def get_team_dict(db_name: str) -> Union[list[Union[str, Any]], Dict[int, str]]:
     """
     Get all the team names and team ids
     :param db_name:
@@ -86,10 +86,10 @@ def get_team_list(db_name: str) -> List:
 
         response = requests.request("GET", url, headers=headers, data=payload)
 
-        return [f"{i['team_id']} - {i['team_name']}" for i in response.json()]
+        return {int(i['team_id']):  f"{i['team_name']}" for i in response.json()}
 
 
-def get_org_list(db_name: str) -> List:
+def get_org_dict(db_name: str) -> Dict[int, str]:
     """
     Get all the team names and team ids
     :param db_name:
@@ -104,10 +104,10 @@ def get_org_list(db_name: str) -> List:
 
     response = requests.request("GET", url, headers=headers, data=payload)
 
-    return [f"{i['org_id']} - {i['org_name']}" for i in response.json()]
+    return {int(i['org_id']): f"{i['org_name']}" for i in response.json()}
 
 
-def get_workout_list(db_name: str) -> List:
+def get_workout_list(db_name: str) -> List[str]:
     """
     Get workout names list based on db name
     :param db_name:
