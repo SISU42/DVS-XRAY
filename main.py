@@ -12,7 +12,7 @@ from payloads import Insert_player_payload_non_forecast, Insert_dvs_eval_payload
 
 from api_calls import get_db_status, get_trainer_dict, get_facility_dict, get_team_dict, get_org_dict, \
     get_workout_list, get_dvs_client_table, get_workout_id_name_dict, get_analyst_names, get_dvs_player_table, \
-    get_dvs_score, check_duplicates, generate_primary_key, add_player_to_db
+    get_dvs_score, check_duplicates, generate_primary_key, add_player_to_db, add_eval_info_to_db
 
 
 def process_db_status(db_status: Union[int, str]) -> None:
@@ -63,7 +63,7 @@ tab_player, tab_score, tab_report, tab_x_ray, tab_compare, tab_admin, tab_logout
 # Init setup
 # Facility dict
 facility_dict = get_facility_dict(db_connection_name.value)
-rev_facility_dict = {v: k for k,v in facility_dict.items()}
+rev_facility_dict = {v: k for k, v in facility_dict.items()}
 
 # Trainer dict
 trainer_dict = get_trainer_dict(db_connection_name.value)
@@ -71,7 +71,7 @@ rev_trainer_dict = {v: k for k, v in trainer_dict.items()}
 
 # Team dict
 team_dict = get_team_dict(db_connection_name.value)
-rev_team_dict = {v: k for k,v in team_dict.items()}
+rev_team_dict = {v: k for k, v in team_dict.items()}
 
 # Organization dict
 organization_dict = get_org_dict(db_connection_name.value)
@@ -184,7 +184,8 @@ with tab_player.expander("Add new player"):
                                                                    workout_id=workout_id, position=position[0],
                                                                    current_organization=organization[3:],
                                                                    dvs_trainer_id=int(rev_trainer_dict[trainer]),
-                                                                   dvs_facility_id=int(rev_facility_dict[facility]), current_team=team,
+                                                                   dvs_facility_id=int(rev_facility_dict[facility]),
+                                                                   current_team=team,
                                                                    client_email=email, client_phone=phone,
                                                                    org_id=organization[0], team_id=team[0])
             submit_player_to_add(db_connection_name.value, 'dvs_client', 'dvs_client_id',
@@ -338,15 +339,27 @@ with tab_player.expander('Edit existing player'):
                 # Update db
 
 
-# def insert_dvs_eval(payload: Insert_dvs_eval_payload) -> bool:
-#     """
-#     Inserts a row into dvs_eval table
-#     :param payload:
-#     :return:
-#     """
-#     # TODO get the value of eval id
-#
-#     # TODO perform insert
+def insert_eval_info(db_name: str, table_name: str, pk: str,
+                     payload_object: Insert_dvs_eval_payload) -> bool:
+    """
+    Function to insert into dvs_eval table based on db_name
+    :param db_name:
+    :param table_name:
+    :param pk:
+    :param payload_object:
+    :return:
+    """
+    # Generate primary key
+    pk_to_insert = generate_primary_key(pk, table_name, db_name)
+
+    if pk_to_insert == -1:
+        st.error('Cannot insert this player into DB. There was an error while generating a primary key')
+        st.stop()
+
+    # Perform the insert
+    add_eval_info_to_db(db_name=db_name, eval_id=pk_to_insert, payload=payload_object)
+
+    return True
 
 
 with tab_player.expander('Add bio and performance data'):
@@ -364,7 +377,7 @@ with tab_player.expander('Add bio and performance data'):
 
             if len(selected_rows) != 0:
                 form_add_bio = st.form(key='add_bio')
-                eval_date = form_add_bio.date_input(label='Eval Date*')
+                eval_date = form_add_bio.date_input(label='Eval Date*').strftime('%Y-%m-%d')
 
                 trainer_list = list(trainer_dict.values())
                 trainer = form_add_bio.selectbox(label="DVS Trainer", options=trainer_list)
@@ -374,8 +387,11 @@ with tab_player.expander('Add bio and performance data'):
                 avg_fb_velo = form_add_bio.text_input(label='Avg FB Velo')
                 max_fb_velo = form_add_bio.text_input(label='Max FB Velo')
                 avg_fb_spin_rate = form_add_bio.text_input(label='Avg FB Spin Rate')
+                max_fb_spin_rate = form_add_bio.text_input(label='Max FB Spin Rate')
                 avg_cb_velo = form_add_bio.text_input(label='Avg CB Velo')
+                max_cb_velo = form_add_bio.text_input(label='Max CB Velo')
                 avg_cb_spin_rate = form_add_bio.text_input(label='Avg CB Spin Rate')
+                max_cb_spin_rate = form_add_bio.text_input(label='Max CB Spin Rate')
 
                 st.text('*Required')
 
@@ -390,12 +406,25 @@ with tab_player.expander('Add bio and performance data'):
                         tab_player.error('All required fields must be entered')
                         st.stop()
 
+                    payload = Insert_dvs_eval_payload(eval_date=eval_date,
+                                                      dvs_trainer_id=int(rev_trainer_dict[trainer]),
+                                                      height=float(height_in), weight=float(weight_lbs),
+                                                      dvs_client_id=selected_rows[0]['dvs_client_id'],
+                                                      fb_velocity_avg=avg_fb_velo,
+                                                      fb_velocity_max=max_fb_velo, fb_spin_avg=avg_fb_spin_rate,
+                                                      fb_spin_max=max_fb_spin_rate, cb_velocity_avg=avg_cb_velo,
+                                                      cb_velocity_max=max_cb_velo, cb_spin_avg=avg_cb_spin_rate,
+                                                      cb_spin_max=max_cb_spin_rate)
+                    insert_eval_info(db_connection_name.value, "dvs_eval", "eval_id", payload)
+                    st.success(f"Bio and performance data has been successfully added for client_id " \
+                               f"{selected_rows[0]['dvs_client_id']}")
+
 with tab_player.expander('Add range of motion data'):
     if db_connection_name == DB_CONNECTION.FORECAST:
         st.write('DOES NOT APPLY TO DVS ANALYTICS')
     else:
         form_add_motion = st.form(key='add_motion')
-        eval_date = form_add_motion.date_input(label='Eval Date*')
+        eval_date = form_add_motion.date_input(label='Eval Date*').strftime('%Y-%m-%d')
 
         trainer_list = list(trainer_dict.values())
         trainer = form_add_motion.selectbox(label="DVS Trainer", options=trainer_list)

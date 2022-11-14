@@ -24,37 +24,37 @@ class Insert_player_payload_non_forecast:
     college: str = ""
 
 
-# @dataclass
-# class Insert_dvs_eval_payload:
-#     eval_date: str
-#     dvs_trainer_id: int
-#     height: float
-#     weight: float
-#     dvs_client_id: int
-#     fb_velocity_avg: float
-#     fb_velocity_max: float
-#     fb_spin_avg: float
-#     fb_spin_max: float
-#     cb_velocity_avg: float
-#     cb_velocity_max: float
-#     cb_spin_avg: float
-#     cb_spin_max: float
-#     cb_break: float
-#     bullpen_pitch_count: int = -1
-#     bullpen_strikes_total: int = -1
-#     bullpen_strikes_right: int = -1
-#     bullpen_strikes_left: int = -1
-#     strength_rating: float = -1.0
-#     shoulder_1: float = -1.0
-#     shoulder_2: float = -1.0
-#     shoulder_3: float = -1.0
-#     shoulder_4: float = -1.0
-#     FMS_DS: float = -1.0
-#     FMS_HS: float = -1.0
-#     FMS_ILL: float = -1.0
-#     FMS_SM: float = -1.0
-#     FMS_ASLR: float = -1.0
-#     FMS_TSPU: float = -1.0
-#     FMS_RS: float = -1.0
-#     FMS_TOTAL: float = -1.0
-#     release_height: float = -1.0
+@dataclass
+class Insert_dvs_eval_payload:
+    eval_date: str
+    dvs_trainer_id: int
+    height: float
+    weight: float
+    dvs_client_id: int
+    fb_velocity_avg: float
+    fb_velocity_max: float
+    fb_spin_avg: float
+    fb_spin_max: float
+    cb_velocity_avg: float
+    cb_velocity_max: float
+    cb_spin_avg: float
+    cb_spin_max: float
+    cb_break: float = -1.0
+    bullpen_pitch_count: int = -1
+    bullpen_strikes_total: int = -1
+    bullpen_strikes_right: int = -1
+    bullpen_strikes_left: int = -1
+    strength_rating: float = -1.0
+    shoulder_1: float = -1.0
+    shoulder_2: float = -1.0
+    shoulder_3: float = -1.0
+    shoulder_4: float = -1.0
+    FMS_DS: float = -1.0
+    FMS_HS: float = -1.0
+    FMS_ILL: float = -1.0
+    FMS_SM: float = -1.0
+    FMS_ASLR: float = -1.0
+    FMS_TSPU: float = -1.0
+    FMS_RS: float = -1.0
+    FMS_TOTAL: float = -1.0
+    release_height: float = -1.0

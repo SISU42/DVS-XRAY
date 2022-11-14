@@ -9,7 +9,7 @@ import json
 
 from db_connection import DB_CONNECTION
 
-from payloads import Insert_player_payload_non_forecast
+from payloads import Insert_player_payload_non_forecast, Insert_dvs_eval_payload
 
 MLB_TEAMS = ['SEA', 'WAS', 'BAL', 'CLE', 'ANA', 'NYN', 'SDN', 'TEX', 'ARI', 'CHA', 'HOU', 'MIL', 'PHI', 'SLN', 'BOS',
              'COL', 'LAN', 'NYA', 'SFN', 'TOR', 'ATL', 'CIN', 'KCA', 'MIN', 'PIT', 'TBA', 'CHN', 'DET', 'MIA', 'OAK']
@@ -301,6 +301,25 @@ def add_player_to_db(db_name: str, pk: int, payload: Insert_player_payload_non_f
     """
 
     url = f"https://deliveryvaluesystemapidev.azurewebsites.net/insert_into_dvs_client/{pk}/{db_name}"
+
+    headers = {
+        'Content-Type': 'application/json',
+    }
+
+    response = requests.request("POST", url, headers=headers, data=json.dumps(payload.__dict__))
+
+    return None
+
+
+def add_eval_info_to_db(db_name: str, eval_id: int, payload: Insert_dvs_eval_payload):
+    """
+    Rest API trigger to add eval_info to dvs_eval
+    :param db_name:
+    :param eval_id:
+    :param payload:
+    :return:
+    """
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/add_bio_performance_data/{eval_id}/{db_name}"
 
     headers = {
         'Content-Type': 'application/json',
