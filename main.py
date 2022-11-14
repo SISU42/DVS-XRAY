@@ -8,7 +8,7 @@ from st_aggrid import AgGrid, GridOptionsBuilder
 
 from db_connection import DB_CONNECTION
 
-from payloads import Insert_player_payload_non_forecast
+from payloads import Insert_player_payload_non_forecast, Insert_dvs_eval_payload
 
 from api_calls import get_db_status, get_trainer_dict, get_facility_dict, get_team_dict, get_org_dict, \
     get_workout_list, get_dvs_client_table, get_workout_id_name_dict, get_analyst_names, get_dvs_player_table, \
@@ -63,15 +63,19 @@ tab_player, tab_score, tab_report, tab_x_ray, tab_compare, tab_admin, tab_logout
 # Init setup
 # Facility dict
 facility_dict = get_facility_dict(db_connection_name.value)
+rev_facility_dict = {v: k for k,v in facility_dict.items()}
 
 # Trainer dict
 trainer_dict = get_trainer_dict(db_connection_name.value)
+rev_trainer_dict = {v: k for k, v in trainer_dict.items()}
 
 # Team dict
 team_dict = get_team_dict(db_connection_name.value)
+rev_team_dict = {v: k for k,v in team_dict.items()}
 
 # Organization dict
 organization_dict = get_org_dict(db_connection_name.value)
+rev_organization_dict = {v: k for k, v in organization_dict.items()}
 
 
 def check_required_fields(*args):
@@ -88,9 +92,10 @@ def check_required_fields(*args):
         return 1
 
 
-def submit_player_to_add(db_name: str, pk: str, payload_object: Insert_player_payload_non_forecast) -> bool:
+def submit_player_to_add(db_name: str, table_name: str, pk: str,
+                         payload_object: Insert_player_payload_non_forecast) -> bool:
     # Generate primary key
-    pk_to_insert = generate_primary_key(pk, db_name)
+    pk_to_insert = generate_primary_key(pk, table_name, db_name)
 
     if pk_to_insert == -1:
         st.error('Cannot insert this player into DB. There was an error while generating a primary key')
@@ -178,11 +183,12 @@ with tab_player.expander("Add new player"):
                                                                    birthday=birthdate, birthyear=birthyear,
                                                                    workout_id=workout_id, position=position[0],
                                                                    current_organization=organization[3:],
-                                                                   dvs_trainer_id=int(trainer[0]),
-                                                                   dvs_facility_id=int(facility[0]), current_team=team,
+                                                                   dvs_trainer_id=int(rev_trainer_dict[trainer]),
+                                                                   dvs_facility_id=int(rev_facility_dict[facility]), current_team=team,
                                                                    client_email=email, client_phone=phone,
                                                                    org_id=organization[0], team_id=team[0])
-            submit_player_to_add(db_connection_name.value, 'dvs_client_id', payload_object=add_player_object)
+            submit_player_to_add(db_connection_name.value, 'dvs_client', 'dvs_client_id',
+                                 payload_object=add_player_object)
             st.success(f"Added player to {db_connection_name.value}")
 
         # else:
@@ -330,6 +336,18 @@ with tab_player.expander('Edit existing player'):
                     st.stop()
 
                 # Update db
+
+
+# def insert_dvs_eval(payload: Insert_dvs_eval_payload) -> bool:
+#     """
+#     Inserts a row into dvs_eval table
+#     :param payload:
+#     :return:
+#     """
+#     # TODO get the value of eval id
+#
+#     # TODO perform insert
+
 
 with tab_player.expander('Add bio and performance data'):
     if db_connection_name == DB_CONNECTION.FORECAST:

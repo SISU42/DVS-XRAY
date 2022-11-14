@@ -271,14 +271,14 @@ def check_duplicates(db_name: str, birthday: str, first_name: str, last_name: st
         return False
 
 
-def generate_primary_key(pk: str, db_name: str) -> int:
+def generate_primary_key(pk: str, table_name: str, db_name: str) -> int:
     """
     Generate a primary key for the client/player tables
-    :param pk:
+    :param pk: column name of primary key
     :param db_name:
     :return:
     """
-    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/max_pk/{pk}/{db_name}"
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/max_pk/{pk}/{table_name}/{db_name}"
 
     payload = {}
     headers = {}
