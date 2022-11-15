@@ -8,11 +8,12 @@ from st_aggrid import AgGrid, GridOptionsBuilder
 
 from db_connection import DB_CONNECTION
 
-from payloads import Insert_player_payload_non_forecast, Insert_dvs_eval_payload, Insert_dvs_eval_rom
+from payloads import Insert_player_payload_non_forecast, Insert_dvs_eval_payload, Insert_dvs_eval_rom, Insert_dvs_score
 
 from api_calls import get_db_status, get_trainer_dict, get_facility_dict, get_team_dict, get_org_dict, \
-    get_workout_list, get_dvs_client_table, get_workout_id_name_dict, get_analyst_names, get_dvs_player_table, \
-    get_dvs_score, check_duplicates, generate_primary_key, add_player_to_db, add_eval_info_to_db, add_eval_rom_to_db
+    get_workout_list, get_dvs_client_table, get_workout_id_name_dict, get_dvs_player_table, \
+    get_dvs_score, check_duplicates, generate_primary_key, add_player_to_db, add_eval_info_to_db, add_eval_rom_to_db, \
+    add_dvs_score_to_db, get_analyst_dict
 
 
 def process_db_status(db_status: Union[int, str]) -> None:
@@ -77,6 +78,10 @@ rev_team_dict = {v: k for k, v in team_dict.items()}
 organization_dict = get_org_dict(db_connection_name.value)
 rev_organization_dict = {v: k for k, v in organization_dict.items()}
 
+# Analyst dict
+analyst_dict = get_analyst_dict(db_connection_name.value)
+rev_analyst_dict = {v: k for k, v in analyst_dict.items()}
+
 
 def check_required_fields(*args):
     """
@@ -87,6 +92,8 @@ def check_required_fields(*args):
     if 'None' in args:
         return 0
     elif "" in args:
+        return 0
+    elif -1 in args:
         return 0
     else:
         return 1
@@ -495,11 +502,12 @@ with tab_player.expander('Add range of motion data'):
 
                     payload = Insert_dvs_eval_rom(eval_date=eval_date, dvs_client_id=selected_rows[0]['dvs_client_id'],
                                                   dvs_trainer_id=int(rev_trainer_dict[trainer]),
-                                                  dir=d_ir, der=d_er, ndir=nd_ir, nder= nd_er, dtam= d_tam, ndtam=nd_tam,
+                                                  dir=d_ir, der=d_er, ndir=nd_ir, nder=nd_er, dtam=d_tam, ndtam=nd_tam,
                                                   dflex=d_flex, ndflex=nd_flex, d_cuff_strength=d_cuff_str,
                                                   kibler=kibler, nd_cuff_strength=nd_cuff_str,
                                                   d_ir_cuff_strength=d_ir_cuff_str, d_er_cuff_strength=d_er_cuff_str,
-                                                  nd_ir_cuff_strength=nd_ir_cuff_str, nd_er_cuff_strength=nd_er_cuff_str,
+                                                  nd_ir_cuff_strength=nd_ir_cuff_str,
+                                                  nd_er_cuff_strength=nd_er_cuff_str,
                                                   d_kibler=d_kibler, nd_kibler=nd_kibler)
                     insert_eval_rom(db_connection_name.value, "dvs_eval_rom", "eval_id", payload)
                     st.success(f"Range of motion data has been successfully added for client_id "
@@ -520,6 +528,28 @@ def get_selected_player_display(raw_dict: Dict, db_connection: DB_CONNECTION) ->
         return f"{raw_dict['first_name']} {raw_dict['last_name']} {suffix}"
     else:
         return f"{raw_dict['client_firstname']} {raw_dict['client_lastname']}"
+
+
+def insert_to_dvs_score_table(db_name: str, table_name: str, pk, payload_obj: Insert_dvs_score):
+    """
+    Function to insert into dvs_eval_rom table
+    :param db_name:
+    :param table_name:
+    :param pk:
+    :param payload_obj:
+    :return:
+    """
+    # Generate primary key
+    pk_to_insert = generate_primary_key(pk, table_name, db_name)
+
+    if pk_to_insert == -1:
+        st.error('Cannot insert this player into DB. There was an error while generating a primary key')
+        st.stop()
+
+    # Perform the insert
+    add_dvs_score_to_db(db_name=db_name, score_id=pk_to_insert, payload=payload_obj)
+
+    return True
 
 
 with tab_score.expander('Add new DVS Score'):
@@ -543,60 +573,91 @@ with tab_score.expander('Add new DVS Score'):
             selected_player = get_selected_player_display(selected_row, db_connection_name)
             form_add_score.markdown(f"Selected player: {selected_player}")
 
-            score_date = form_add_score.date_input(label='Score date*')
+            score_date = form_add_score.date_input(label='Score date*').strftime('%Y-%m-%d')
 
             # TODO Waiting on permissions for dvs_client table on dvs_forecast db
-            # dvs_analyst = form_add_score.selectbox(label='DVS Analyst',
-            #                                        options=get_analyst_names(db_connection_name.value))
+            dvs_analyst = form_add_score.selectbox(label='DVS Analyst',
+                                                   options=analyst_dict.values())
 
-            mm_score = form_add_score.number_input(label='MM_SCORE*')
-            mm_stop = form_add_score.number_input(label='MM_STOP')
-            mm_deg = form_add_score.number_input(label='MM_DEG')
+            mm_score = form_add_score.number_input(label='MM_SCORE*', value=-1)
+            mm_stop = form_add_score.number_input(label='MM_STOP', value=-1)
+            mm_deg = form_add_score.number_input(label='MM_DEG', value=-1)
 
-            as_score = form_add_score.number_input(label='AS_SCORE*')
-            as_r = form_add_score.number_input(label='AS_R')
-            as_h = form_add_score.number_input(label='AS_H')
-            as_b = form_add_score.number_input(label='AS_B')
-            as_r_deg = form_add_score.number_input(label='AS_R_DEG')
-            as_h_deg = form_add_score.number_input(label='AS_H_DEG')
+            as_score = form_add_score.number_input(label='AS_SCORE*', value=-1)
+            as_r = form_add_score.number_input(label='AS_R', value=-1)
+            as_h = form_add_score.number_input(label='AS_H', value=-1)
+            as_b = form_add_score.number_input(label='AS_B', value=-1)
+            as_r_deg = form_add_score.number_input(label='AS_R_DEG', value=-1)
+            as_h_deg = form_add_score.number_input(label='AS_H_DEG', value=-1)
 
-            p_score = form_add_score.number_input(label='P_SCORE*')
-            p_flex_deg = form_add_score.number_input(label='P_FLEX_DEG')
-            p_ext_deg = form_add_score.number_input(label='P_EXT_DEG')
-            p_chg_deg = form_add_score.number_input(label='P_CHG_DEG')
+            p_score = form_add_score.number_input(label='P_SCORE*', value=-1)
+            p_flex_deg = form_add_score.number_input(label='P_FLEX_DEG', value=-1)
+            p_ext_deg = form_add_score.number_input(label='P_EXT_DEG', value=-1)
+            p_chg_deg = form_add_score.number_input(label='P_CHG_DEG', value=-1)
 
-            pafs_score = form_add_score.number_input(label='PAFS_SCORE*')
-            pafs_below = form_add_score.number_input(label='PAFS_BELOW')
-            pafs_vert = form_add_score.number_input(label='PAFS_VERT')
-            pafs_spine = form_add_score.number_input(label='PAFS_SPINE')
-            pafs_dir = form_add_score.number_input(label='PAFS_DIR')
-            pafs_vstrike_deg = form_add_score.number_input(label='PAFS_VSTRIKE_DEG')
-            pafs_stretch_deg = form_add_score.number_input(label='PAFS_STRETCH_DEG')
-            pafs_horiz_deg = form_add_score.number_input(label='PAFS_HORIZ_DEG')
-            pafs_vert_deg = form_add_score.number_input(label='PAFS_VERT_DEG')
+            pafs_score = form_add_score.number_input(label='PAFS_SCORE*', value=-1)
+            pafs_below = form_add_score.number_input(label='PAFS_BELOW', value=-1)
+            pafs_vert = form_add_score.number_input(label='PAFS_VERT', value=-1)
+            pafs_spine = form_add_score.number_input(label='PAFS_SPINE', value=-1)
+            pafs_dir = form_add_score.number_input(label='PAFS_DIR', value=-1)
+            pafs_vstrike_deg = form_add_score.number_input(label='PAFS_VSTRIKE_DEG', value=-1)
+            pafs_stretch_deg = form_add_score.number_input(label='PAFS_STRETCH_DEG', value=-1)
+            pafs_horiz_deg = form_add_score.number_input(label='PAFS_HORIZ_DEG', value=-1)
+            pafs_vert_deg = form_add_score.number_input(label='PAFS_VERT_DEG', value=-1)
 
-            paa_score = form_add_score.number_input(label='PAA_SCORE*')
-            paa_bow_deg = form_add_score.number_input(label='PAA_BOW_DEG')
-            paa_deg = form_add_score.number_input(label='PAA_DEG')
-            paa_os = form_add_score.number_input(label='PAA_OS')
-            paa_spine_deg = form_add_score.number_input(label='PAA_SPINE_DEG')
-            paa_chest_deg = form_add_score.number_input(label='PAA_CHEST_DEG')
-            paa_vext_deg = form_add_score.number_input(label='PAA_VEXT_DEG')
+            paa_score = form_add_score.number_input(label='PAA_SCORE*', value=-1)
+            paa_bow_deg = form_add_score.number_input(label='PAA_BOW_DEG', value=-1)
+            paa_deg = form_add_score.number_input(label='PAA_DEG', value=-1)
+            paa_os = form_add_score.number_input(label='PAA_OS', value=-1)
+            paa_spine_deg = form_add_score.number_input(label='PAA_SPINE_DEG', value=-1)
+            paa_chest_deg = form_add_score.number_input(label='PAA_CHEST_DEG', value=-1)
+            paa_vext_deg = form_add_score.number_input(label='PAA_VEXT_DEG', value=-1)
 
-            f_score = form_add_score.number_input(label='F_SCORE*')
-            f_bf = form_add_score.number_input(label='F_BF')
-            f_par = form_add_score.number_input(label='F_PAR')
-            f_oh = form_add_score.number_input(label='F_OH')
-            f_hd = form_add_score.number_input(label='F_HD')
-            f_par_deg = form_add_score.number_input(label='F_PAR_DEG')
-            f_oh_deg = form_add_score.number_input(label='F_OH_DEG')
+            f_score = form_add_score.number_input(label='F_SCORE*', value=-1)
+            f_bf = form_add_score.number_input(label='F_BF', value=-1)
+            f_par = form_add_score.number_input(label='F_PAR', value=-1)
+            f_oh = form_add_score.number_input(label='F_OH', value=-1)
+            f_hd = form_add_score.number_input(label='F_HD', value=-1)
+            f_par_deg = form_add_score.number_input(label='F_PAR_DEG', value=-1)
+            f_oh_deg = form_add_score.number_input(label='F_OH_DEG', value=-1)
 
-            ap1_score = form_add_score.number_input(label='ap1_score')
-            total_dvs_score = form_add_score.number_input(label='total_dvs_score*')
+            ap1_score = form_add_score.number_input(label='ap1_score', value=-1)
+            total_dvs_score = form_add_score.number_input(label='total_dvs_score*', value=-1)
 
             form_add_score.write('Required*')
 
             submit_form_add_score = form_add_score.form_submit_button('SUBMIT')
+
+            if submit_form_add_score:
+                # Check if all required fields are entered
+                req_fields = check_required_fields(score_date, mm_score, as_score, p_score, pafs_score,
+                                                   paa_score, f_score, total_dvs_score)
+
+                # Check for required fields
+                if not req_fields:
+                    st.error('All required fields must be entered')
+                    st.stop()
+
+                payload = Insert_dvs_score(dvs_client_id=selected_rows[0]['dvs_client_id'], score_date=score_date,
+                                           dvs_analyst_id=rev_analyst_dict[dvs_analyst], mm_score=mm_score,
+                                           mm_stop=mm_stop, mm_deg=mm_deg,
+                                           as_score=as_score, as_r=as_r, as_h=as_h, as_b=as_b, as_r_deg=as_r_deg,
+                                           as_h_deg=as_h_deg, p_score=p_score, p_flex_deg=p_flex_deg,
+                                           p_ext_deg=p_ext_deg, p_chg_deg=p_chg_deg, pafs_score=pafs_score,
+                                           pafs_below=pafs_below, pafs_vert=pafs_vert, pafs_spine=pafs_spine,
+                                           pafs_dir=pafs_dir, pafs_vstrike_deg=pafs_vstrike_deg,
+                                           pafs_stretch_deg= pafs_stretch_deg, pafs_horiz_deg=pafs_horiz_deg,
+                                           pafs_vert_deg=pafs_vert_deg,
+                                           paa_score=paa_score, paa_bow_deg=paa_bow_deg, paa_deg=paa_deg, paa_os=paa_os,
+                                           paa_spine_deg=paa_spine_deg, paa_chest_deg=paa_chest_deg,
+                                           paa_vext_deg=paa_vext_deg,
+                                           f_score=f_score, f_bf=f_bf, f_par=f_par, f_oh=f_oh, f_hd=f_hd,
+                                           f_par_deg=f_par_deg, f_oh_deg=f_oh_deg, ap1_score=ap1_score,
+                                           total_dvs_score=total_dvs_score)
+                insert_to_dvs_score_table(db_name=db_connection_name.value, table_name="dvs_score",
+                                          pk="dvs_score_id", payload_obj=payload)
+                st.success(f"Scores have been successfully added for client_id "
+                           f"{selected_rows[0]['dvs_client_id']}")
 
 
 def get_client_player_id(db_connection_name: DB_CONNECTION, selected_row: Dict) -> int:

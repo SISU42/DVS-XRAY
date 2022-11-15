@@ -9,7 +9,7 @@ import json
 
 from db_connection import DB_CONNECTION
 
-from payloads import Insert_player_payload_non_forecast, Insert_dvs_eval_payload, Insert_dvs_eval_rom
+from payloads import Insert_player_payload_non_forecast, Insert_dvs_eval_payload, Insert_dvs_eval_rom, Insert_dvs_score
 
 MLB_TEAMS = ['SEA', 'WAS', 'BAL', 'CLE', 'ANA', 'NYN', 'SDN', 'TEX', 'ARI', 'CHA', 'HOU', 'MIL', 'PHI', 'SLN', 'BOS',
              'COL', 'LAN', 'NYA', 'SFN', 'TOR', 'ATL', 'CIN', 'KCA', 'MIN', 'PIT', 'TBA', 'CHN', 'DET', 'MIA', 'OAK']
@@ -105,6 +105,22 @@ def get_org_dict(db_name: str) -> Dict[int, str]:
     response = requests.request("GET", url, headers=headers, data=payload)
 
     return {int(i['org_id']): f"{i['org_name']}" for i in response.json()}
+
+
+def get_analyst_dict(db_name: str) -> Dict[int, str]:
+    """
+    Based on db_name return unique analyst names and ids
+    :param db_name:
+    :return:
+    """
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/analyst_names/{db_name}"
+
+    payload = {}
+    headers = {}
+
+    response = requests.request("GET", url, headers=headers, data=payload)
+
+    return {int(i['dvs_analyst_id']): f"{i['analyst_name']}" for i in response.json()}
 
 
 def get_workout_list(db_name: str) -> List[str]:
@@ -207,22 +223,6 @@ def get_workout_id_name_dict(db_name: str) -> Dict[int, str]:
     response = requests.request("GET", url, headers=headers, data=payload)
 
     return response.json()
-
-
-def get_analyst_names(db_name: str) -> List[str]:
-    """
-    Based on db_name return unique analyst names and ids
-    :param db_name:
-    :return:
-    """
-    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/analyst_names/{db_name}"
-
-    payload = {}
-    headers = {}
-
-    response = requests.request("GET", url, headers=headers, data=payload).json()
-
-    return [f"{i['dvs_analyst_id']}: {i['analyst_name']}" for i in response]
 
 
 def get_dvs_score(db_name: str, client_id: int, key_: str) -> AgGridReturn:
@@ -339,6 +339,25 @@ def add_eval_rom_to_db(db_name: str, eval_id: int, payload: Insert_dvs_eval_rom)
     :return:
     """
     url = f"https://deliveryvaluesystemapidev.azurewebsites.net/add_dvs_eval_rom/{eval_id}/{db_name}"
+
+    headers = {
+        'Content-Type': 'application/json',
+    }
+
+    response = requests.request("POST", url, headers=headers, data=json.dumps(payload.__dict__))
+
+    return None
+
+
+def add_dvs_score_to_db(db_name: str, score_id: int, payload: Insert_dvs_score):
+    """
+    Rest API trigget to add to dvs_eval_rom
+    :param db_name:
+    :param score_id:
+    :param payload:
+    :return:
+    """
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/add_dvs_score/{score_id}/{db_name}"
 
     headers = {
         'Content-Type': 'application/json',

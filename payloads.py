@@ -81,3 +81,50 @@ class Insert_dvs_eval_rom:
     nd_er_cuff_strength: float = -1.0
     d_kibler: int = -1
     nd_kibler: int = -1
+
+
+@dataclass
+class Insert_dvs_score:
+    dvs_client_id: int
+    score_date: str
+    dvs_analyst_id: int
+    mm_score: int = -1
+    mm_stop: int= -1
+    mm_deg: float= -1
+    as_score: int= -1
+    as_r: int= -1
+    as_h: int= -1
+    as_b: int= -1
+    p_score: int= -1
+    p_flex_deg: float= -1
+    p_ext_deg: float= -1
+    pafs_score: int= -1
+    pafs_below: int= -1
+    pafs_vert: int= -1
+    pafs_spine: int= -1
+    pafs_dir: int= -1
+    paa_score: int= -1
+    paa_deg: float= -1
+    paa_os: int= -1
+    f_score: int= -1
+    f_bf: int= -1
+    f_par: int= -1
+    f_oh: int= -1
+    f_hd: int= -1
+    total_dvs_score: float= -1
+    pdf_report_filepath: str= -1
+    as_r_deg: float= -1
+    as_h_deg: float= -1
+    p_chg_deg: float= -1
+    pafs_vstrike_deg: float= -1
+    pafs_stretch_deg: float= -1
+    paa_bow_deg: float= -1
+    ap1_score: float= -1
+    pafs_vert_deg: float= -1
+    paa_spine_deg: float= -1
+    paa_chest_deg: float= -1
+    paa_vext_deg: float= -1
+    f_par_deg: float= -1
+    f_oh_deg: float= -1
+    pafs_horiz_deg: float= -1
+
