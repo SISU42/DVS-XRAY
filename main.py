@@ -462,8 +462,6 @@ with tab_player.expander('Add range of motion data'):
                 trainer_list = list(trainer_dict.values())
                 trainer = form_add_motion.selectbox(label="DVS Trainer", options=trainer_list)
 
-
-                # TODO switch text_input to ints
                 d_ir = form_add_motion.number_input(label='D_IR', value=-1)
                 d_er = form_add_motion.number_input(label='D_ER', value=-1)
                 nd_ir = form_add_motion.number_input(label='ND_IR', value=-1)
