@@ -58,3 +58,26 @@ class Insert_dvs_eval_payload:
     FMS_RS: float = -1.0
     FMS_TOTAL: float = -1.0
     release_height: float = -1.0
+
+@dataclass
+class Insert_dvs_eval_rom:
+    eval_date: str
+    dvs_client_id: int
+    dvs_trainer_id: int
+    dir: int = -1
+    der: int = -1
+    ndir: int = -1
+    nder: int = -1
+    dtam: int = -1
+    ndtam: int = -1
+    dflex: int = -1
+    ndflex: int = -1
+    d_cuff_strength: float = -1.0
+    kibler: int = -1
+    nd_cuff_strength: float = -1.0
+    d_ir_cuff_strength: float = -1.0
+    d_er_cuff_strength: float = -1.0
+    nd_ir_cuff_strength: float = -1.0
+    nd_er_cuff_strength: float = -1.0
+    d_kibler: int = -1
+    nd_kibler: int = -1

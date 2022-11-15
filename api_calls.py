@@ -9,7 +9,7 @@ import json
 
 from db_connection import DB_CONNECTION
 
-from payloads import Insert_player_payload_non_forecast, Insert_dvs_eval_payload
+from payloads import Insert_player_payload_non_forecast, Insert_dvs_eval_payload, Insert_dvs_eval_rom
 
 MLB_TEAMS = ['SEA', 'WAS', 'BAL', 'CLE', 'ANA', 'NYN', 'SDN', 'TEX', 'ARI', 'CHA', 'HOU', 'MIL', 'PHI', 'SLN', 'BOS',
              'COL', 'LAN', 'NYA', 'SFN', 'TOR', 'ATL', 'CIN', 'KCA', 'MIN', 'PIT', 'TBA', 'CHN', 'DET', 'MIA', 'OAK']
@@ -86,7 +86,7 @@ def get_team_dict(db_name: str) -> Union[list[Union[str, Any]], Dict[int, str]]:
 
         response = requests.request("GET", url, headers=headers, data=payload)
 
-        return {int(i['team_id']):  f"{i['team_name']}" for i in response.json()}
+        return {int(i['team_id']): f"{i['team_name']}" for i in response.json()}
 
 
 def get_org_dict(db_name: str) -> Dict[int, str]:
@@ -320,6 +320,25 @@ def add_eval_info_to_db(db_name: str, eval_id: int, payload: Insert_dvs_eval_pay
     :return:
     """
     url = f"https://deliveryvaluesystemapidev.azurewebsites.net/add_bio_performance_data/{eval_id}/{db_name}"
+
+    headers = {
+        'Content-Type': 'application/json',
+    }
+
+    response = requests.request("POST", url, headers=headers, data=json.dumps(payload.__dict__))
+
+    return None
+
+
+def add_eval_rom_to_db(db_name: str, eval_id: int, payload: Insert_dvs_eval_rom):
+    """
+    Rest API trigget to add to dvs_eval_rom
+    :param db_name:
+    :param eval_id:
+    :param payload:
+    :return:
+    """
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/add_dvs_eval_rom/{eval_id}/{db_name}"
 
     headers = {
         'Content-Type': 'application/json',

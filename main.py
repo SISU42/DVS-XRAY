@@ -8,11 +8,11 @@ from st_aggrid import AgGrid, GridOptionsBuilder
 
 from db_connection import DB_CONNECTION
 
-from payloads import Insert_player_payload_non_forecast, Insert_dvs_eval_payload
+from payloads import Insert_player_payload_non_forecast, Insert_dvs_eval_payload, Insert_dvs_eval_rom
 
 from api_calls import get_db_status, get_trainer_dict, get_facility_dict, get_team_dict, get_org_dict, \
     get_workout_list, get_dvs_client_table, get_workout_id_name_dict, get_analyst_names, get_dvs_player_table, \
-    get_dvs_score, check_duplicates, generate_primary_key, add_player_to_db, add_eval_info_to_db
+    get_dvs_score, check_duplicates, generate_primary_key, add_player_to_db, add_eval_info_to_db, add_eval_rom_to_db
 
 
 def process_db_status(db_status: Union[int, str]) -> None:
@@ -419,37 +419,93 @@ with tab_player.expander('Add bio and performance data'):
                     st.success(f"Bio and performance data has been successfully added for client_id " \
                                f"{selected_rows[0]['dvs_client_id']}")
 
+
+def insert_eval_rom(db_name, table_name, pk, payload_obj: Insert_dvs_eval_rom):
+    """
+    Function to insert into dvs_eval_rom table
+    :param db_name:
+    :param table_name:
+    :param pk:
+    :param payload_obj:
+    :return:
+    """
+    # Generate primary key
+    pk_to_insert = generate_primary_key(pk, table_name, db_name)
+
+    if pk_to_insert == -1:
+        st.error('Cannot insert this player into DB. There was an error while generating a primary key')
+        st.stop()
+
+    # Perform the insert
+    add_eval_rom_to_db(db_name=db_name, eval_id=pk_to_insert, payload=payload_obj)
+
+    return True
+
+
 with tab_player.expander('Add range of motion data'):
     if db_connection_name == DB_CONNECTION.FORECAST:
         st.write('DOES NOT APPLY TO DVS ANALYTICS')
     else:
-        form_add_motion = st.form(key='add_motion')
-        eval_date = form_add_motion.date_input(label='Eval Date*').strftime('%Y-%m-%d')
+        # Add a search box
+        last_name_search = st.text_input(label="Search by last name: ", max_chars=50,
+                                         key='Add range of motion data')
 
-        trainer_list = list(trainer_dict.values())
-        trainer = form_add_motion.selectbox(label="DVS Trainer", options=trainer_list)
+        # Last name condition to display agg table
+        if len(last_name_search) != 0:
+            grid_response = get_dvs_client_table(db_connection_name.value, last_name_search, key_=last_name_search)
+            selected_rows = grid_response['selected_rows']
 
-        d_ir = form_add_motion.text_input(label='D_IR')
-        d_er = form_add_motion.text_input(label='D_ER')
-        nd_ir = form_add_motion.text_input(label='ND_IR')
-        nd_er = form_add_motion.text_input(label='ND_ER')
-        d_tam = form_add_motion.text_input(label='D_TAM')
-        nd_tam = form_add_motion.text_input(label='ND_TAM')
-        d_flex = form_add_motion.text_input(label='D_FLEX')
-        nd_flex = form_add_motion.text_input(label='ND_FLEX')
-        d_cuff_str = form_add_motion.text_input(label='D_CUFF_STR')
-        nd_cuff_str = form_add_motion.text_input(label='ND_CUFF_STR')
-        d_ir_cuff_str = form_add_motion.text_input(label='D_IR_CUFF_STR')
-        d_er_cuff_str = form_add_motion.text_input(label='D_ER_CUFF_STR')
-        nd_ir_cuff_str = form_add_motion.text_input(label='ND_IR_CUFF_STR')
-        nd_er_cuff_str = form_add_motion.text_input(label='ND_ER_CUFF_STR')
-        d_kibler = form_add_motion.text_input(label='D_Kibler')
-        nd_kibler = form_add_motion.text_input(label='ND_Kibler')
-        kibler = form_add_motion.text_input(label='Kibler')
+            if len(selected_rows) > 0:
+                form_add_motion = st.form(key='add_motion')
+                eval_date = form_add_motion.date_input(label='Eval Date*').strftime('%Y-%m-%d')
 
-        st.write('*Required')
+                trainer_list = list(trainer_dict.values())
+                trainer = form_add_motion.selectbox(label="DVS Trainer", options=trainer_list)
 
-        submit_form_add_motion = form_add_motion.form_submit_button('SUBMIT')
+
+                # TODO switch text_input to ints
+                d_ir = form_add_motion.number_input(label='D_IR', value=-1)
+                d_er = form_add_motion.number_input(label='D_ER', value=-1)
+                nd_ir = form_add_motion.number_input(label='ND_IR', value=-1)
+                nd_er = form_add_motion.number_input(label='ND_ER', value=-1)
+                d_tam = form_add_motion.number_input(label='D_TAM', value=-1)
+                nd_tam = form_add_motion.number_input(label='ND_TAM', value=-1)
+                d_flex = form_add_motion.number_input(label='D_FLEX', value=-1)
+                nd_flex = form_add_motion.number_input(label='ND_FLEX', value=-1)
+                d_cuff_str = form_add_motion.number_input(label='D_CUFF_STR', value=-1)
+                nd_cuff_str = form_add_motion.number_input(label='ND_CUFF_STR', value=-1)
+                d_ir_cuff_str = form_add_motion.number_input(label='D_IR_CUFF_STR', value=-1)
+                d_er_cuff_str = form_add_motion.number_input(label='D_ER_CUFF_STR', value=-1)
+                nd_ir_cuff_str = form_add_motion.number_input(label='ND_IR_CUFF_STR', value=-1)
+                nd_er_cuff_str = form_add_motion.number_input(label='ND_ER_CUFF_STR', value=-1)
+                d_kibler = form_add_motion.number_input(label='D_Kibler', value=-1)
+                nd_kibler = form_add_motion.number_input(label='ND_Kibler', value=-1)
+                kibler = form_add_motion.number_input(label='Kibler', value=-1)
+
+                st.write('*Required')
+
+                submit_form_add_motion = form_add_motion.form_submit_button('ADD')
+
+                if submit_form_add_motion:
+                    # Check if all required fields are entered
+                    req_fields = check_required_fields(eval_date)
+
+                    # Check for required fields
+                    if not req_fields:
+                        tab_player.error('All required fields must be entered')
+                        st.stop()
+
+                    payload = Insert_dvs_eval_rom(eval_date=eval_date, dvs_client_id=selected_rows[0]['dvs_client_id'],
+                                                  dvs_trainer_id=int(rev_trainer_dict[trainer]),
+                                                  dir=d_ir, der=d_er, ndir=nd_ir, nder= nd_er, dtam= d_tam, ndtam=nd_tam,
+                                                  dflex=d_flex, ndflex=nd_flex, d_cuff_strength=d_cuff_str,
+                                                  kibler=kibler, nd_cuff_strength=nd_cuff_str,
+                                                  d_ir_cuff_strength=d_ir_cuff_str, d_er_cuff_strength=d_er_cuff_str,
+                                                  nd_ir_cuff_strength=nd_ir_cuff_str, nd_er_cuff_strength=nd_er_cuff_str,
+                                                  d_kibler=d_kibler, nd_kibler=nd_kibler)
+                    insert_eval_rom(db_connection_name.value, "dvs_eval_rom", "eval_id", payload)
+                    st.success(f"Range of motion data has been successfully added for client_id "
+                               f"{selected_rows[0]['dvs_client_id']}")
 
 
 # Score tab
