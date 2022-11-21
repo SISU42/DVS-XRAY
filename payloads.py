@@ -128,3 +128,58 @@ class Insert_dvs_score:
     f_oh_deg: float= -1
     pafs_horiz_deg: float= -1
 
+@dataclass
+class DVS_trainer:
+    trainer_lastname: str
+    trainer_firstname: str
+    dvs_facility_id: int
+    trainer_phone: str
+    trainer_email: str
+    rstudio_un: str = "NA"
+
+
+@dataclass
+class DVS_facility:
+    facility_name: str
+    facility_phone: str
+    facility_address: str
+    facility_city: str
+    facility_state: str
+    facility_country: str
+    facility_postcode: str
+    license_type: str = 'NA'
+    license_expiration: str = '2050-01-01'
+
+
+@dataclass
+class DVS_organization:
+    org_name: str
+    org_address: str
+    org_city: str
+    org_state: str
+    org_postcode: str
+    org_country: str
+    org_president: str
+    org_phone: str
+    org_email: str
+    org_website: str
+    license_type: str
+    license_expiration: str = '2050-01-01'
+
+@dataclass
+class DVS_team:
+    org_id: int
+    team_name: str
+    team_address: str
+    team_city: str
+    team_state: str
+    team_postcode: str
+    team_country: str
+    team_phone: str
+    team_email: str
+    team_website: str
+    dvs_facility_id: int = -1
+    dvs_trainer_id: int = -1
+    license_expiraton: str = '2050-01-01'
+    license_type: str = 'NA'
+

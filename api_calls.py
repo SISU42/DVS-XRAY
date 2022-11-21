@@ -9,7 +9,8 @@ import json
 
 from db_connection import DB_CONNECTION
 
-from payloads import Insert_player_payload_non_forecast, Insert_dvs_eval_payload, Insert_dvs_eval_rom, Insert_dvs_score
+from payloads import Insert_player_payload_non_forecast, Insert_dvs_eval_payload, Insert_dvs_eval_rom, Insert_dvs_score, \
+    DVS_trainer, DVS_facility, DVS_organization, DVS_team
 
 MLB_TEAMS = ['SEA', 'WAS', 'BAL', 'CLE', 'ANA', 'NYN', 'SDN', 'TEX', 'ARI', 'CHA', 'HOU', 'MIL', 'PHI', 'SLN', 'BOS',
              'COL', 'LAN', 'NYA', 'SFN', 'TOR', 'ATL', 'CIN', 'KCA', 'MIN', 'PIT', 'TBA', 'CHN', 'DET', 'MIA', 'OAK']
@@ -366,3 +367,152 @@ def add_dvs_score_to_db(db_name: str, score_id: int, payload: Insert_dvs_score):
     response = requests.request("POST", url, headers=headers, data=json.dumps(payload.__dict__))
 
     return None
+
+
+def check_trainer_exists(first_name: str, last_name: str, db_name: str) -> int:
+    """
+    Trainer duplicate check in dvs_trainer table
+    :param first_name:
+    :param last_name:
+    :param db_name:
+    :return:
+    """
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/trainer_check/{first_name}/{last_name}/{db_name}"
+
+    headers = {
+        'Content-Type': 'application/json',
+    }
+
+    response = requests.request("GET", url, headers=headers)
+
+    return int(response.json())
+
+
+def add_trainer_to_db(payload: DVS_trainer, trainer_id: int, db_name: str) -> int:
+    """
+    Insert into dvs_trainer table
+    :param payload:
+    :param trainer_id:
+    :param db_name:
+    :return:
+    """
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/add_trainer/{trainer_id}/{db_name}"
+
+    headers = {
+        'Content-Type': 'application/json',
+    }
+
+    response = requests.request("POST", url, headers=headers, data=json.dumps(payload.__dict__))
+
+    return 1
+
+
+def check_facility_exists(facility_name: str, db_name: str) -> int:
+    """
+    Facility diplicate check trigger
+    :param facility_name:
+    :param db_name:
+    :return:
+    """
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/facility_check/{facility_name}/{db_name}"
+
+    headers = {
+        'Content-Type': 'application/json',
+    }
+
+    response = requests.request("GET", url, headers=headers)
+
+    return int(response.json())
+
+
+def add_facility_to_db(payload: DVS_facility, facility_id: int, db_name: str) -> int:
+    """
+    API trigger to insert into facility
+    :param payload:
+    :param facility_id:
+    :param db_name:
+    :return:
+    """
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/add_facility/{facility_id}/{db_name}"
+
+    headers = {
+        'Content-Type': 'application/json',
+    }
+
+    response = requests.request("POST", url, headers=headers, data=json.dumps(payload.__dict__))
+
+    return 1
+
+
+def check_org_exists(org_name: str, db_name: str) -> int:
+    """
+    Org duplicate check
+    :param org_name:
+    :param db_name:
+    :return:
+    """
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/org_check/{org_name}/{db_name}"
+
+    headers = {
+        'Content-Type': 'application/json',
+    }
+
+    response = requests.request("GET", url, headers=headers)
+
+    return int(response.json())
+
+
+def add_org_to_db(payload: DVS_organization, org_id: int, db_name: str) -> int:
+    """
+    API trigger to add to dvs_organization
+    :param payload:
+    :param org_id:
+    :param db_name:
+    :return:
+    """
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/add_org/{org_id}/{db_name}"
+
+    headers = {
+        'Content-Type': 'application/json',
+    }
+
+    response = requests.request("POST", url, headers=headers, data=json.dumps(payload.__dict__))
+
+    return 1
+
+
+def check_team_exists(team_name: str, db_name: str) -> int:
+    """
+    Team duplicate check
+    :param team_name:
+    :param db_name:
+    :return:
+    """
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/team_check/{team_name}/{db_name}"
+
+    headers = {
+        'Content-Type': 'application/json',
+    }
+
+    response = requests.request("GET", url, headers=headers)
+
+    return int(response.json())
+
+
+def add_team_to_db(payload: DVS_team, team_id: int, db_name: str) -> int:
+    """
+    API trigger to add to dvs_team
+    :param payload:
+    :param team_id:
+    :param db_name:
+    :return:
+    """
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/add_team/{team_id}/{db_name}"
+
+    headers = {
+        'Content-Type': 'application/json',
+    }
+
+    response = requests.request("POST", url, headers=headers, data=json.dumps(payload.__dict__))
+
+    return 1

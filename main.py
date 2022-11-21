@@ -8,12 +8,14 @@ from st_aggrid import AgGrid, GridOptionsBuilder
 
 from db_connection import DB_CONNECTION
 
-from payloads import Insert_player_payload_non_forecast, Insert_dvs_eval_payload, Insert_dvs_eval_rom, Insert_dvs_score
+from payloads import Insert_player_payload_non_forecast, Insert_dvs_eval_payload, Insert_dvs_eval_rom, Insert_dvs_score, \
+    DVS_trainer, DVS_facility, DVS_organization, DVS_team
 
 from api_calls import get_db_status, get_trainer_dict, get_facility_dict, get_team_dict, get_org_dict, \
     get_workout_list, get_dvs_client_table, get_workout_id_name_dict, get_dvs_player_table, \
     get_dvs_score, check_duplicates, generate_primary_key, add_player_to_db, add_eval_info_to_db, add_eval_rom_to_db, \
-    add_dvs_score_to_db, get_analyst_dict
+    add_dvs_score_to_db, get_analyst_dict, check_trainer_exists, add_trainer_to_db, check_facility_exists, \
+    add_facility_to_db, check_org_exists, check_team_exists, add_team_to_db
 
 
 def process_db_status(db_status: Union[int, str]) -> None:
@@ -646,7 +648,7 @@ with tab_score.expander('Add new DVS Score'):
                                            p_ext_deg=p_ext_deg, p_chg_deg=p_chg_deg, pafs_score=pafs_score,
                                            pafs_below=pafs_below, pafs_vert=pafs_vert, pafs_spine=pafs_spine,
                                            pafs_dir=pafs_dir, pafs_vstrike_deg=pafs_vstrike_deg,
-                                           pafs_stretch_deg= pafs_stretch_deg, pafs_horiz_deg=pafs_horiz_deg,
+                                           pafs_stretch_deg=pafs_stretch_deg, pafs_horiz_deg=pafs_horiz_deg,
                                            pafs_vert_deg=pafs_vert_deg,
                                            paa_score=paa_score, paa_bow_deg=paa_bow_deg, paa_deg=paa_deg, paa_os=paa_os,
                                            paa_spine_deg=paa_spine_deg, paa_chest_deg=paa_chest_deg,
@@ -780,7 +782,76 @@ with tab_score.expander('Edit existing DVS Score'):
         #
         # score_date = form_edit_score.date_input(label='Score date*', value=grid_response_score['score_date'])
 
+
 # Admin tab
+def insert_into_dvs_trainer(db_name: str, table_name: str, pk: str, payload: DVS_trainer):
+    """
+    Trigger dvs_trainer insert API endpoint
+    :param db_name:
+    :param table_name:
+    :param pk:
+    :param payload:
+    :return:
+    """
+    # Generate primary key
+    pk_to_insert = generate_primary_key(pk, table_name, db_name)
+
+    if pk_to_insert == -1:
+        st.error('Cannot insert this player into DB. There was an error while generating a primary key')
+        st.stop()
+
+    # Perform the insert
+    add_trainer_to_db(db_name=db_name, trainer_id=pk_to_insert, payload=payload)
+
+    return True
+
+
+def insert_into_dvs_facility(db_name, table_name, pk, payload):
+    # Generate primary key
+    pk_to_insert = generate_primary_key(pk, table_name, db_name)
+
+    if pk_to_insert == -1:
+        st.error('Cannot insert this player into DB. There was an error while generating a primary key')
+        st.stop()
+
+    # Perform the insert
+    add_facility_to_db(db_name=db_name, facility_id=pk_to_insert, payload=payload)
+
+    return True
+
+
+def add_ord_to_db(db_name, facility_id, payload):
+    pass
+
+
+def insert_into_dvs_org(db_name, table_name, pk, payload):
+    # Generate primary key
+    pk_to_insert = generate_primary_key(pk, table_name, db_name)
+
+    if pk_to_insert == -1:
+        st.error('Cannot insert this player into DB. There was an error while generating a primary key')
+        st.stop()
+
+    # Perform the insert
+    add_ord_to_db(db_name=db_name, facility_id=pk_to_insert, payload=payload)
+
+    return True
+
+
+def insert_into_dvs_team(db_name, table_name, pk, payload):
+    # Generate primary key
+    pk_to_insert = generate_primary_key(pk, table_name, db_name)
+
+    if pk_to_insert == -1:
+        st.error('Cannot insert this player into DB. There was an error while generating a primary key')
+        st.stop()
+
+    # Perform the insert
+    add_team_to_db(db_name=db_name, team_id=pk_to_insert, payload=payload)
+
+    return True
+
+
 with tab_admin:
     if db_connection_name == DB_CONNECTION.FORECAST:
         st.markdown('Does not apply to *DVS Analytics*')
@@ -790,12 +861,35 @@ with tab_admin:
             first_name = form_add_trainer_admin.text_input(label='First name*')
             last_name = form_add_trainer_admin.text_input(label='Last name*')
             email = form_add_trainer_admin.text_input(label='Email')
-            facility = form_add_trainer_admin.text_input(label='Facility*')
+            facility = form_add_trainer_admin.selectbox(label='Facility*', options=facility_dict.values())
             phone = form_add_trainer_admin.text_input(label='Phone')
 
             form_add_trainer_admin.markdown('*Required')
 
-            form_add_trainer_admin.form_submit_button(label='SUBMIT')
+            submit_add_trainer = form_add_trainer_admin.form_submit_button(label='SUBMIT')
+
+            if submit_add_trainer:
+                # Check if all required fields are entered
+                req_fields = check_required_fields(first_name, last_name, facility)
+
+                # Check for required fields
+                if not req_fields:
+                    st.error('All required fields must be entered')
+                    st.stop()
+
+                # Check if firstname and lastname already exist in the table. Stop the transaction if they do exist
+                if check_trainer_exists(first_name, last_name, db_connection_name.value) == 0:
+                    st.error('This trainer already exists in the database. Please try a different firstname or '
+                             'lastname if you want to add this trainer to the database')
+                    st.stop()
+
+                payload_obj = DVS_trainer(trainer_lastname=last_name, trainer_firstname=first_name,
+                                          dvs_facility_id=int(rev_facility_dict[facility]), trainer_phone=phone,
+                                          trainer_email=email)
+                insert_into_dvs_facility(db_name=db_connection_name.value, table_name='dvs_facility',
+                                         pk='dvs_facility_id',
+                                         payload=payload_obj)
+                st.success('Trainer has been successfully added!')
 
         with tab_admin.expander('Edit existing trainer'):
             pass
@@ -812,7 +906,29 @@ with tab_admin:
 
             form_add_facility_admin.markdown('*Required')
 
-            form_add_facility_admin.form_submit_button(label='SUBMIT')
+            submit_add_facility = form_add_facility_admin.form_submit_button(label='SUBMIT')
+
+            if submit_add_facility:
+                # Check if all required fields are entered
+                req_fields = check_required_fields(facility_name)
+
+                # Check for required fields
+                if not req_fields:
+                    st.error('All required fields must be entered')
+                    st.stop()
+
+                # Check if firstname and lastname already exist in the table. Stop the transaction if they do exist
+                if check_facility_exists(facility_name, db_connection_name.value) == 0:
+                    st.error('This facility already exists in the database. Please try a different facility name')
+                    st.stop()
+
+                payload_obj = DVS_facility(facility_name=facility_name, facility_phone=phone_, facility_address=address,
+                                           facility_city=city, facility_state=state, facility_country=country,
+                                           facility_postcode=post_code)
+                insert_into_dvs_facility(db_name=db_connection_name.value, table_name='dvs_facility',
+                                         pk='dvs_facility_id',
+                                         payload=payload_obj)
+                st.success('Facility has been successfully added!')
 
         with tab_admin.expander('Edit existing facility'):
             pass
@@ -831,7 +947,28 @@ with tab_admin:
             website = form_add_org_admin.text_input(label='Website')
 
             form_add_org_admin.markdown('*Required')
-            form_add_org_admin.form_submit_button(label='SUBMIT')
+            submit_add_org = form_add_org_admin.form_submit_button(label='SUBMIT')
+
+            if submit_add_org:
+                # Check if all required fields are entered
+                req_fields = check_required_fields(name)
+
+                # Check for required fields
+                if not req_fields:
+                    st.error('All required fields must be entered')
+                    st.stop()
+
+                # Check if firstname and lastname already exist in the table. Stop the transaction if they do exist
+                if check_org_exists(name, db_connection_name.value) == 0:
+                    st.error('This organization already exists in the database. Please try a different org name')
+                    st.stop()
+
+                payload_obj = DVS_organization(org_name=name, org_address=address_, org_city=city_, org_state=state_,
+                                               org_postcode=postcode_, org_country=country_, org_president=president,
+                                               org_phone=phone__, org_email=email__, org_website=website)
+                insert_into_dvs_org(db_name=db_connection_name.value, table_name='dvs_organization', pk='org_id',
+                                    payload=payload_obj)
+                st.success('Organization has been successfully added!')
 
         with tab_admin.expander('Edit existing organization'):
             pass
@@ -839,8 +976,8 @@ with tab_admin:
         with tab_admin.expander('Add team'):
             form_add_team_admin = st.form(key='add_team_admin')
             organization_name_ = form_add_team_admin.selectbox(label='Organization*',
-                                                               options=get_org_dict(db_connection_name.value))
-            team_name = form_add_team_admin.text_input(label='Team name')
+                                                               options=get_org_dict(db_connection_name.value).values())
+            team_name = form_add_team_admin.text_input(label='Team name*')
             team_address = form_add_team_admin.text_input(label='Address')
             team_city = form_add_team_admin.text_input(label='City')
             team_state = form_add_team_admin.text_input(label='State')
@@ -855,7 +992,31 @@ with tab_admin:
                                                          options=list(team_dict.values()))
 
             form_add_team_admin.markdown('*Required')
-            form_add_team_admin.form_submit_button(label='SUBMIT')
+            submit_add_team = form_add_team_admin.form_submit_button(label='SUBMIT')
+
+            if submit_add_team:
+                # Check if all required fields are entered
+                req_fields = check_required_fields(organization_name_, team_name)
+
+                # Check for required fields
+                if not req_fields:
+                    st.error('All required fields must be entered')
+                    st.stop()
+
+                # Check if team name already exist in the table. Stop the transaction if they do exist
+                if check_team_exists(team_name, db_connection_name.value) == 0:
+                    st.error('This team already exists in the database. Please try a different team name')
+                    st.stop()
+                #
+                payload_obj = DVS_team(org_id=rev_organization_dict[organization_name_], team_name=team_name,
+                                       team_address=team_address, team_city=team_city, team_state=team_state,
+                                       team_postcode=team_postcode, team_country=team_country, team_phone=team_phone,
+                                       team_email=team_email, team_website=team_website,
+                                       dvs_facility_id=rev_facility_dict.get(team_facility, -1),
+                                       dvs_trainer_id=rev_trainer_dict.get(team_trainer, -1))
+                insert_into_dvs_team(db_name=db_connection_name.value, table_name='dvs_team', pk='team_id',
+                                     payload=payload_obj)
+                st.success('Team has been successfully added!')
 
         with tab_admin.expander('Edit existing team'):
             pass
