@@ -1,7 +1,10 @@
-from typing import Union, List, Optional, Dict
+from typing import Union, List, Optional, Dict, Callable
 from datetime import datetime
 
+import os
+import sys
 import re
+import shutil
 import streamlit as st
 import pandas as pd
 from st_aggrid import AgGrid, GridOptionsBuilder
@@ -16,6 +19,8 @@ from api_calls import get_db_status, get_trainer_dict, get_facility_dict, get_te
     get_dvs_score, check_duplicates, generate_primary_key, add_player_to_db, add_eval_info_to_db, add_eval_rom_to_db, \
     add_dvs_score_to_db, get_analyst_dict, check_trainer_exists, add_trainer_to_db, check_facility_exists, \
     add_facility_to_db, check_org_exists, check_team_exists, add_team_to_db
+
+from msk.uploaded_video_file import UploadedFile, uploaded_videos_dir_name, upload_video, video_exists, get_video_bytes
 
 
 def process_db_status(db_status: Union[int, str]) -> None:
@@ -1024,7 +1029,53 @@ with tab_admin:
 # Report tab
 with tab_report:
     st.markdown("This feature is under development.")
+
+
 # X-RAY tab
+def show_page():
+    # Drag and drop video file - also write a call back function here that would generate a tracker csv as the video gets
+    # uploaded
+    raw_video_file = st.file_uploader("Choose a video file (in mp4 or mov format)",
+                                      type=['mp4', 'mov'])
+
+
+
+    if raw_video_file is not None:
+        st.markdown("## Uploaded video")
+
+        bytes_data = raw_video_file.getvalue()
+        st.video(bytes_data)
+
+        # Upload file
+        uploaded_video_file_path = os.path.join(uploaded_videos_dir_name, raw_video_file.name)
+        upload_video(bytes_data, uploaded_video_file_path)
+
+        # # Create Uploaded file object
+        uploaded_file = UploadedFile(uploaded_video_file_path)
+
+        st.markdown('## MSK overlay')
+
+        filtered_video_path = os.path.join("filtered_mks",
+                                           f"{raw_video_file.name.split('.')[0]}_joint_tracker_filtered.mp4")
+
+        with st.spinner("Processing video in the background (This may take a few mins)..."):
+
+            st.write(filtered_video_path)
+
+            if not video_exists(filtered_video_path):
+                filtered_video_path = uploaded_file.process_video()
+            else:
+                print(f"Filtered video for this file already exists - {filtered_video_path}")
+
+            print(filtered_video_path)
+            st.video(get_video_bytes(filtered_video_path))
+
+        st.success("File processing is done!")
+
+
+with tab_x_ray:
+    show_page()
+
 
 
 # Compare tab
