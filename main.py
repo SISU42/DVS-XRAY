@@ -266,91 +266,91 @@ def strip_id_from_name(str_: str) -> Optional[str]:
         return None
 
 
-with tab_player.expander('Edit existing player'):
-    # Add a search box
-    last_name_search = st.text_input(label="Search by last name: ", max_chars=50)
-
-    # Last name condition to display agg table
-    if len(last_name_search) != 0:
-        grid_response = get_dvs_client_table(db_connection_name.value, last_name_search, key_=last_name_search)
-
-        selected_rows = grid_response['selected_rows']
-
-        if len(selected_rows) != 0:
-            form = st.form(key='edit_player')
-            selected_row = selected_rows[0]
-
-            first_name = form.text_input(label="First name*", value=selected_row['client_firstname'])
-            last_name = form.text_input(label="Last name*", value=selected_row['client_lastname'])
-
-            if db_connection_name == DB_CONNECTION.FORECAST:
-                suffix = form.text_input(label="Suffix")
-
-            birthdate = form.date_input(label="Birthdate*", value=datetime.fromisoformat(selected_row['birthday']))
-
-            if db_connection_name != DB_CONNECTION.FORECAST:
-                email = form.text_input(label="Email*", value=selected_row['client_email'])
-
-                trainer_list = list(trainer_dict.values())
-                trainer = form.selectbox(label="Trainer*", index=trainer_list.index(selected_row['trainer_name']),
-                                         options=trainer_list)
-
-                facility_list = list(facility_dict.values())
-                facility = form.selectbox(label="Facility*", index=facility_list.index(selected_row['facility_name']),
-                                          options=facility_list)
-
-                organization_list = list(organization_dict.values())
-                organization = form.selectbox(label="Organization*",
-                                              index=get_index(organization_list, selected_row['current_organization']),
-                                              options=organization_list)
-
-            team_list = list(team_dict.values())
-            team = form.selectbox(label="Team*", index=get_index(team_list, selected_row['current_team']),
-                                  options=team_list)
-
-            db_position = get_postion(selected_row["position"])
-            position_list = ["Starter", "Reliever"]
-            position = form.selectbox(label="Position", index=get_index(position_list, db_position),
-                                      options=["Starter", "Reliever"])
-
-            db_throws = get_throws(selected_row["throws"])
-            throws_list = ["Left", "Right"]
-            throws = form.selectbox(label="Throws", index=get_index(throws_list, db_throws), options=["Left", "Right"])
-
-            if db_connection_name != DB_CONNECTION.FORECAST:
-                workout_id_name_dict = get_workout_id_name_dict(db_connection_name.value)
-                workout_list = get_workout_list(db_connection_name.value)
-                workout = form.selectbox(label="Workout*",
-                                         index=get_index(workout_list,
-                                                         workout_id_name_dict[selected_row['workout_id']]),
-                                         options=workout_list)
-
-                phone = form.text_input(label="Phone", value=selected_row['client_phone'], max_chars=12)
-            else:
-                retired = form.selectbox(label='Retired*', options=['Yes', 'No'])
-                height_in = form.text_input(label='Height (in)*')
-                weight_lbs = form.text_input(label='Weight (lbs)*')
-                mlbamid = form.text_input(label='MLBAMID')
-
-            tab_player.text('*Required')
-
-            submit_form = form.form_submit_button(label="SUBMIT")
-
-            if submit_form:
-                req_fields = check_required_fields(first_name, last_name, birthdate,
-                                                   email, trainer, facility, organization, team,
-                                                   workout)
-                if not req_fields:
-                    st.error('All required fields must be entered')
-                    st.stop()
-
-                # Check if player exists by checking birthday, first_name, last_name
-                duplicate_check = check_duplicates(db_connection_name.value, birthdate, first_name, last_name)
-                if not duplicate_check:
-                    tab_player.error('This player exists in the database')
-                    st.stop()
-
-                # Update db
+# with tab_player.expander('Edit existing player'):
+#     # Add a search box
+#     last_name_search = st.text_input(label="Search by last name: ", max_chars=50)
+#
+#     # Last name condition to display agg table
+#     if len(last_name_search) != 0:
+#         grid_response = get_dvs_client_table(db_connection_name.value, last_name_search, key_=last_name_search)
+#
+#         selected_rows = grid_response['selected_rows']
+#
+#         if len(selected_rows) != 0:
+#             form = st.form(key='edit_player')
+#             selected_row = selected_rows[0]
+#
+#             first_name = form.text_input(label="First name*", value=selected_row['client_firstname'])
+#             last_name = form.text_input(label="Last name*", value=selected_row['client_lastname'])
+#
+#             if db_connection_name == DB_CONNECTION.FORECAST:
+#                 suffix = form.text_input(label="Suffix")
+#
+#             birthdate = form.date_input(label="Birthdate*", value=datetime.fromisoformat(selected_row['birthday']))
+#
+#             if db_connection_name != DB_CONNECTION.FORECAST:
+#                 email = form.text_input(label="Email*", value=selected_row['client_email'])
+#
+#                 trainer_list = list(trainer_dict.values())
+#                 trainer = form.selectbox(label="Trainer*", index=trainer_list.index(selected_row['trainer_name']),
+#                                          options=trainer_list)
+#
+#                 facility_list = list(facility_dict.values())
+#                 facility = form.selectbox(label="Facility*", index=facility_list.index(selected_row['facility_name']),
+#                                           options=facility_list)
+#
+#                 organization_list = list(organization_dict.values())
+#                 organization = form.selectbox(label="Organization*",
+#                                               index=get_index(organization_list, selected_row['current_organization']),
+#                                               options=organization_list)
+#
+#             team_list = list(team_dict.values())
+#             team = form.selectbox(label="Team*", index=get_index(team_list, selected_row['current_team']),
+#                                   options=team_list)
+#
+#             db_position = get_postion(selected_row["position"])
+#             position_list = ["Starter", "Reliever"]
+#             position = form.selectbox(label="Position", index=get_index(position_list, db_position),
+#                                       options=["Starter", "Reliever"])
+#
+#             db_throws = get_throws(selected_row["throws"])
+#             throws_list = ["Left", "Right"]
+#             throws = form.selectbox(label="Throws", index=get_index(throws_list, db_throws), options=["Left", "Right"])
+#
+#             if db_connection_name != DB_CONNECTION.FORECAST:
+#                 workout_id_name_dict = get_workout_id_name_dict(db_connection_name.value)
+#                 workout_list = get_workout_list(db_connection_name.value)
+#                 workout = form.selectbox(label="Workout*",
+#                                          index=get_index(workout_list,
+#                                                          workout_id_name_dict[selected_row['workout_id']]),
+#                                          options=workout_list)
+#
+#                 phone = form.text_input(label="Phone", value=selected_row['client_phone'], max_chars=12)
+#             else:
+#                 retired = form.selectbox(label='Retired*', options=['Yes', 'No'])
+#                 height_in = form.text_input(label='Height (in)*')
+#                 weight_lbs = form.text_input(label='Weight (lbs)*')
+#                 mlbamid = form.text_input(label='MLBAMID')
+#
+#             tab_player.text('*Required')
+#
+#             submit_form = form.form_submit_button(label="SUBMIT")
+#
+#             if submit_form:
+#                 req_fields = check_required_fields(first_name, last_name, birthdate,
+#                                                    email, trainer, facility, organization, team,
+#                                                    workout)
+#                 if not req_fields:
+#                     st.error('All required fields must be entered')
+#                     st.stop()
+#
+#                 # Check if player exists by checking birthday, first_name, last_name
+#                 duplicate_check = check_duplicates(db_connection_name.value, birthdate, first_name, last_name)
+#                 if not duplicate_check:
+#                     tab_player.error('This player exists in the database')
+#                     st.stop()
+#
+#                 # Update db
 
 
 def insert_eval_info(db_name: str, table_name: str, pk: str,
@@ -689,103 +689,103 @@ def replace_none(raw_dict: Dict) -> Dict:
     return {k: -1 if not v else v for k, v in raw_dict.items()}
 
 
-with tab_score.expander('Edit existing DVS Score'):
-    # Add a search box
-    last_name_search = st.text_input(label="Search by last name: ", max_chars=50, key='edit_existing_score')
-
-    # Last name condition to display agg table - forecast db fetches data from dvs_player, others from dvs_client
-    if len(last_name_search) != 0:
-        if db_connection_name != DB_CONNECTION.FORECAST:
-            grid_response = get_dvs_client_table(db_connection_name.value, last_name_search,
-                                                 key_=f"{last_name_search}_score")
-        else:
-            grid_response = get_dvs_player_table(last_name_search, key_=f"{last_name_search}_score")
-
-        selected_player_rows = grid_response['selected_rows']
-
-        if len(selected_player_rows) > 0:
-            selected_player_row = selected_player_rows[0]
-
-            client_id = get_client_player_id(db_connection_name, selected_player_row)
-            grid_response_score = get_dvs_score(db_connection_name.value, client_id,
-                                                key_=f"{last_name_search}_{client_id}")
-
-            selected_scores = grid_response_score['selected_rows']
-
-            if len(selected_scores) > 0:
-                form_edit_score = st.form(key='edit_score')
-                selected_score = replace_none(selected_scores[0])
-
-                selected_player = get_selected_player_display(selected_player_row, db_connection_name)
-                form_edit_score.markdown(f"Selected player: {selected_player}")
-                score_date = form_edit_score.date_input(label='Score date*',
-                                                        value=datetime
-                                                        .fromisoformat(selected_score['score_date']))
-
-                # TODO Waiting on permissions for dvs_client table on dvs_forecast db
-                # dvs_analyst = form_add_score.selectbox(label='DVS Analyst',
-                #                                        options=get_analyst_names(db_connection_name.value))
-
-                mm_score = form_edit_score.number_input(label='MM_SCORE*', value=selected_score['mm_score'])
-                mm_stop = form_edit_score.number_input(label='MM_STOP', value=selected_score['mm_stop'])
-                mm_deg = form_edit_score.number_input(label='MM_DEG', value=selected_score['mm_deg'])
-
-                as_score = form_edit_score.number_input(label='AS_SCORE*', value=selected_score['as_score'])
-                as_r = form_edit_score.number_input(label='AS_R', value=selected_score['as_r'])
-                as_h = form_edit_score.number_input(label='AS_H', value=selected_score['as_h'])
-                as_b = form_edit_score.number_input(label='AS_B', value=selected_score['as_b'])
-                as_r_deg = form_edit_score.number_input(label='AS_R_DEG', value=selected_score['as_r_deg'])
-                as_h_deg = form_edit_score.number_input(label='AS_H_DEG', value=selected_score['as_h_deg'])
-
-                p_score = form_edit_score.number_input(label='P_SCORE*', value=selected_score['p_score'])
-                p_flex_deg = form_edit_score.number_input(label='P_FLEX_DEG', value=selected_score['p_flex_deg'])
-                p_ext_deg = form_edit_score.number_input(label='P_EXT_DEG', value=selected_score['p_ext_deg'])
-                p_chg_deg = form_edit_score.number_input(label='P_CHG_DEG', value=selected_score['p_chg_deg'])
-
-                pafs_score = form_edit_score.number_input(label='PAFS_SCORE*', value=selected_score['pafs_score'])
-                pafs_below = form_edit_score.number_input(label='PAFS_BELOW', value=selected_score['pafs_below'])
-                pafs_vert = form_edit_score.number_input(label='PAFS_VERT', value=selected_score['pafs_vert'])
-                pafs_spine = form_edit_score.number_input(label='PAFS_SPINE', value=selected_score['pafs_spine'])
-                pafs_dir = form_edit_score.number_input(label='PAFS_DIR', value=selected_score['pafs_dir'])
-                pafs_vstrike_deg = form_edit_score.number_input(label='PAFS_VSTRIKE_DEG',
-                                                                value=selected_score['pafs_vstrike_deg'])
-                pafs_stretch_deg = form_edit_score.number_input(label='PAFS_STRETCH_DEG',
-                                                                value=selected_score['pafs_stretch_deg'])
-                pafs_horiz_deg = form_edit_score.number_input(label='PAFS_HORIZ_DEG',
-                                                              value=selected_score['pafs_horiz_deg'])
-                pafs_vert_deg = form_edit_score.number_input(label='PAFS_VERT_DEG',
-                                                             value=selected_score['pafs_vert_deg'])
-
-                paa_score = form_edit_score.number_input(label='PAA_SCORE*', value=selected_score['paa_score'])
-                paa_bow_deg = form_edit_score.number_input(label='PAA_BOW_DEG', value=selected_score['paa_bow_deg'])
-                paa_deg = form_edit_score.number_input(label='PAA_DEG', value=selected_score['paa_deg'])
-                paa_os = form_edit_score.number_input(label='PAA_OS', value=selected_score['paa_os'])
-                paa_spine_deg = form_edit_score.number_input(label='PAA_SPINE_DEG',
-                                                             value=selected_score['paa_spine_deg'])
-                paa_chest_deg = form_edit_score.number_input(label='PAA_CHEST_DEG',
-                                                             value=selected_score['paa_chest_deg'])
-                paa_vext_deg = form_edit_score.number_input(label='PAA_VEXT_DEG',
-                                                            value=selected_score['paa_vext_deg'])
-
-                f_score = form_edit_score.number_input(label='F_SCORE*', value=selected_score['f_score'])
-                f_bf = form_edit_score.number_input(label='F_BF', value=selected_score['f_bf'])
-                f_par = form_edit_score.number_input(label='F_PAR', value=selected_score['f_par'])
-                f_oh = form_edit_score.number_input(label='F_OH', value=selected_score['f_oh'])
-                f_hd = form_edit_score.number_input(label='F_HD', value=selected_score['f_hd'])
-                f_par_deg = form_edit_score.number_input(label='F_PAR_DEG', value=selected_score['f_par_deg'])
-                f_oh_deg = form_edit_score.number_input(label='F_OH_DEG', value=selected_score['f_oh_deg'])
-
-                ap1_score = form_edit_score.number_input(label='ap1_score', value=selected_score['ap1_score'])
-                total_dvs_score = form_edit_score.number_input(label='total_dvs_score*',
-                                                               value=selected_score['total_dvs_score'])
-
-                form_edit_score.write('Required*')
-
-                submit_form_add_score = form_edit_score.form_submit_button('SUBMIT')
-
-        # form_edit_score = st.form(key='edit_score')
-        #
-        # score_date = form_edit_score.date_input(label='Score date*', value=grid_response_score['score_date'])
+# with tab_score.expander('Edit existing DVS Score'):
+#     # Add a search box
+#     last_name_search = st.text_input(label="Search by last name: ", max_chars=50, key='edit_existing_score')
+#
+#     # Last name condition to display agg table - forecast db fetches data from dvs_player, others from dvs_client
+#     if len(last_name_search) != 0:
+#         if db_connection_name != DB_CONNECTION.FORECAST:
+#             grid_response = get_dvs_client_table(db_connection_name.value, last_name_search,
+#                                                  key_=f"{last_name_search}_score")
+#         else:
+#             grid_response = get_dvs_player_table(last_name_search, key_=f"{last_name_search}_score")
+#
+#         selected_player_rows = grid_response['selected_rows']
+#
+#         if len(selected_player_rows) > 0:
+#             selected_player_row = selected_player_rows[0]
+#
+#             client_id = get_client_player_id(db_connection_name, selected_player_row)
+#             grid_response_score = get_dvs_score(db_connection_name.value, client_id,
+#                                                 key_=f"{last_name_search}_{client_id}")
+#
+#             selected_scores = grid_response_score['selected_rows']
+#
+#             if len(selected_scores) > 0:
+#                 form_edit_score = st.form(key='edit_score')
+#                 selected_score = replace_none(selected_scores[0])
+#
+#                 selected_player = get_selected_player_display(selected_player_row, db_connection_name)
+#                 form_edit_score.markdown(f"Selected player: {selected_player}")
+#                 score_date = form_edit_score.date_input(label='Score date*',
+#                                                         value=datetime
+#                                                         .fromisoformat(selected_score['score_date']))
+#
+#                 # TODO Waiting on permissions for dvs_client table on dvs_forecast db
+#                 # dvs_analyst = form_add_score.selectbox(label='DVS Analyst',
+#                 #                                        options=get_analyst_names(db_connection_name.value))
+#
+#                 mm_score = form_edit_score.number_input(label='MM_SCORE*', value=selected_score['mm_score'])
+#                 mm_stop = form_edit_score.number_input(label='MM_STOP', value=selected_score['mm_stop'])
+#                 mm_deg = form_edit_score.number_input(label='MM_DEG', value=selected_score['mm_deg'])
+#
+#                 as_score = form_edit_score.number_input(label='AS_SCORE*', value=selected_score['as_score'])
+#                 as_r = form_edit_score.number_input(label='AS_R', value=selected_score['as_r'])
+#                 as_h = form_edit_score.number_input(label='AS_H', value=selected_score['as_h'])
+#                 as_b = form_edit_score.number_input(label='AS_B', value=selected_score['as_b'])
+#                 as_r_deg = form_edit_score.number_input(label='AS_R_DEG', value=selected_score['as_r_deg'])
+#                 as_h_deg = form_edit_score.number_input(label='AS_H_DEG', value=selected_score['as_h_deg'])
+#
+#                 p_score = form_edit_score.number_input(label='P_SCORE*', value=selected_score['p_score'])
+#                 p_flex_deg = form_edit_score.number_input(label='P_FLEX_DEG', value=selected_score['p_flex_deg'])
+#                 p_ext_deg = form_edit_score.number_input(label='P_EXT_DEG', value=selected_score['p_ext_deg'])
+#                 p_chg_deg = form_edit_score.number_input(label='P_CHG_DEG', value=selected_score['p_chg_deg'])
+#
+#                 pafs_score = form_edit_score.number_input(label='PAFS_SCORE*', value=selected_score['pafs_score'])
+#                 pafs_below = form_edit_score.number_input(label='PAFS_BELOW', value=selected_score['pafs_below'])
+#                 pafs_vert = form_edit_score.number_input(label='PAFS_VERT', value=selected_score['pafs_vert'])
+#                 pafs_spine = form_edit_score.number_input(label='PAFS_SPINE', value=selected_score['pafs_spine'])
+#                 pafs_dir = form_edit_score.number_input(label='PAFS_DIR', value=selected_score['pafs_dir'])
+#                 pafs_vstrike_deg = form_edit_score.number_input(label='PAFS_VSTRIKE_DEG',
+#                                                                 value=selected_score['pafs_vstrike_deg'])
+#                 pafs_stretch_deg = form_edit_score.number_input(label='PAFS_STRETCH_DEG',
+#                                                                 value=selected_score['pafs_stretch_deg'])
+#                 pafs_horiz_deg = form_edit_score.number_input(label='PAFS_HORIZ_DEG',
+#                                                               value=selected_score['pafs_horiz_deg'])
+#                 pafs_vert_deg = form_edit_score.number_input(label='PAFS_VERT_DEG',
+#                                                              value=selected_score['pafs_vert_deg'])
+#
+#                 paa_score = form_edit_score.number_input(label='PAA_SCORE*', value=selected_score['paa_score'])
+#                 paa_bow_deg = form_edit_score.number_input(label='PAA_BOW_DEG', value=selected_score['paa_bow_deg'])
+#                 paa_deg = form_edit_score.number_input(label='PAA_DEG', value=selected_score['paa_deg'])
+#                 paa_os = form_edit_score.number_input(label='PAA_OS', value=selected_score['paa_os'])
+#                 paa_spine_deg = form_edit_score.number_input(label='PAA_SPINE_DEG',
+#                                                              value=selected_score['paa_spine_deg'])
+#                 paa_chest_deg = form_edit_score.number_input(label='PAA_CHEST_DEG',
+#                                                              value=selected_score['paa_chest_deg'])
+#                 paa_vext_deg = form_edit_score.number_input(label='PAA_VEXT_DEG',
+#                                                             value=selected_score['paa_vext_deg'])
+#
+#                 f_score = form_edit_score.number_input(label='F_SCORE*', value=selected_score['f_score'])
+#                 f_bf = form_edit_score.number_input(label='F_BF', value=selected_score['f_bf'])
+#                 f_par = form_edit_score.number_input(label='F_PAR', value=selected_score['f_par'])
+#                 f_oh = form_edit_score.number_input(label='F_OH', value=selected_score['f_oh'])
+#                 f_hd = form_edit_score.number_input(label='F_HD', value=selected_score['f_hd'])
+#                 f_par_deg = form_edit_score.number_input(label='F_PAR_DEG', value=selected_score['f_par_deg'])
+#                 f_oh_deg = form_edit_score.number_input(label='F_OH_DEG', value=selected_score['f_oh_deg'])
+#
+#                 ap1_score = form_edit_score.number_input(label='ap1_score', value=selected_score['ap1_score'])
+#                 total_dvs_score = form_edit_score.number_input(label='total_dvs_score*',
+#                                                                value=selected_score['total_dvs_score'])
+#
+#                 form_edit_score.write('Required*')
+#
+#                 submit_form_add_score = form_edit_score.form_submit_button('SUBMIT')
+#
+#         # form_edit_score = st.form(key='edit_score')
+#         #
+#         # score_date = form_edit_score.date_input(label='Score date*', value=grid_response_score['score_date'])
 
 
 # Admin tab
@@ -896,8 +896,8 @@ with tab_admin:
                                          payload=payload_obj)
                 st.success('Trainer has been successfully added!')
 
-        with tab_admin.expander('Edit existing trainer'):
-            pass
+        # with tab_admin.expander('Edit existing trainer'):
+        #     pass
 
         with tab_admin.expander('Add facility'):
             form_add_facility_admin = st.form(key='add_facility_admin')
@@ -935,8 +935,8 @@ with tab_admin:
                                          payload=payload_obj)
                 st.success('Facility has been successfully added!')
 
-        with tab_admin.expander('Edit existing facility'):
-            pass
+        # with tab_admin.expander('Edit existing facility'):
+        #     pass
 
         with tab_admin.expander('Add organinzation'):
             form_add_org_admin = st.form(key='add_organization_admin')
@@ -975,8 +975,8 @@ with tab_admin:
                                     payload=payload_obj)
                 st.success('Organization has been successfully added!')
 
-        with tab_admin.expander('Edit existing organization'):
-            pass
+        # with tab_admin.expander('Edit existing organization'):
+        #     pass
 
         with tab_admin.expander('Add team'):
             form_add_team_admin = st.form(key='add_team_admin')
@@ -1023,8 +1023,8 @@ with tab_admin:
                                      payload=payload_obj)
                 st.success('Team has been successfully added!')
 
-        with tab_admin.expander('Edit existing team'):
-            pass
+        # with tab_admin.expander('Edit existing team'):
+        #     pass
 
 # Report tab
 with tab_report:
