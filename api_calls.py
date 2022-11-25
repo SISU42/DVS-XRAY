@@ -22,9 +22,14 @@ def get_random_string() -> str:
     return "".join(random_sample)
 
 
+class DBCONNECTException(Exception):
+    pass
+
+
 def get_db_status(db_name: str) -> str:
     """
-    GET THE STATUS OF CONNECTION TOO DB
+    Get the status of connection to the DB.
+    If a connection cannot be made, raises a DBCONNECTException
     """
     url = f"https://deliveryvaluesystemapidev.azurewebsites.net/get_db_status?db_name={db_name}"
 
@@ -32,7 +37,12 @@ def get_db_status(db_name: str) -> str:
     headers = {}
     response = requests.request("GET", url, headers=headers, data=payload)
 
-    return response.text
+    if response.status_code == 200:
+        return response.text
+    else:
+        raise DBCONNECTException(f"{db_name} - connection cannot be made at the moment or db_name is misrepresented. "
+                                 f"Please contact admin.")
+
 
 
 def get_trainer_dict(db_name: str) -> Dict[int, str]:
