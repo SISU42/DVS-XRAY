@@ -79,14 +79,14 @@ def get_facility_dict(db_name: str) -> Dict[int, str]:
     return {int(i['dvs_facility_id']): f"{i['facility_name']}" for i in response.json()}
 
 
-def get_team_dict(db_name: str) -> Union[list[Union[str, Any]], Dict[int, str]]:
+def get_team_dict(db_name: str) -> Dict[int, str]:
     """
     Get all the team names and team ids
     :param db_name:
     :return:
     """
     if db_name == DB_CONNECTION.FORECAST.value:
-        return MLB_TEAMS
+        return {index:value for index, value in enumerate(MLB_TEAMS)}
     else:
         url = f"https://deliveryvaluesystemapidev.azurewebsites.net/team_list/{db_name}"
 
@@ -302,7 +302,7 @@ def generate_primary_key(pk: str, table_name: str, db_name: str) -> int:
         return int(response) + 1
 
 
-def add_player_to_db(db_name: str, pk: int, payload: Insert_player_payload_non_forecast) -> None:
+def add_player_to_db(db_name: str, pk: int, payload: Insert_player_payload_non_forecast) -> int:
     """
     Add a player to the db
     :param payload:
@@ -319,10 +319,10 @@ def add_player_to_db(db_name: str, pk: int, payload: Insert_player_payload_non_f
 
     response = requests.request("POST", url, headers=headers, data=json.dumps(payload.__dict__))
 
-    return None
+    return response.status_code
 
 
-def add_eval_info_to_db(db_name: str, eval_id: int, payload: Insert_dvs_eval_payload):
+def add_eval_info_to_db(db_name: str, eval_id: int, payload: Insert_dvs_eval_payload) -> int:
     """
     Rest API trigger to add eval_info to dvs_eval
     :param db_name:
@@ -338,10 +338,10 @@ def add_eval_info_to_db(db_name: str, eval_id: int, payload: Insert_dvs_eval_pay
 
     response = requests.request("POST", url, headers=headers, data=json.dumps(payload.__dict__))
 
-    return None
+    return response.status_code
 
 
-def add_eval_rom_to_db(db_name: str, eval_id: int, payload: Insert_dvs_eval_rom):
+def add_eval_rom_to_db(db_name: str, eval_id: int, payload: Insert_dvs_eval_rom) -> int:
     """
     Rest API trigget to add to dvs_eval_rom
     :param db_name:
@@ -357,7 +357,7 @@ def add_eval_rom_to_db(db_name: str, eval_id: int, payload: Insert_dvs_eval_rom)
 
     response = requests.request("POST", url, headers=headers, data=json.dumps(payload.__dict__))
 
-    return None
+    return response.status_code
 
 
 def add_dvs_score_to_db(db_name: str, score_id: int, payload: Insert_dvs_score):

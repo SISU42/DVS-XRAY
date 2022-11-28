@@ -11,6 +11,8 @@ from st_aggrid import AgGrid, GridOptionsBuilder
 
 from db_connection import DB_CONNECTION
 
+from db_setup import DB_setup
+
 from payloads import Insert_player_payload_non_forecast, Insert_dvs_eval_payload, Insert_dvs_eval_rom, Insert_dvs_score, \
     DVS_trainer, DVS_facility, DVS_organization, DVS_team
 
@@ -18,41 +20,9 @@ from api_calls import get_db_status, get_trainer_dict, get_facility_dict, get_te
     get_workout_list, get_dvs_client_table, get_workout_id_name_dict, get_dvs_player_table, \
     get_dvs_score, check_duplicates, generate_primary_key, add_player_to_db, add_eval_info_to_db, add_eval_rom_to_db, \
     add_dvs_score_to_db, get_analyst_dict, check_trainer_exists, add_trainer_to_db, check_facility_exists, \
-    add_facility_to_db, check_org_exists, check_team_exists, add_team_to_db
+    add_facility_to_db, check_org_exists, check_team_exists, add_team_to_db, DBCONNECTException
 
 from msk.uploaded_video_file import UploadedFile, uploaded_videos_dir_name, upload_video, video_exists, get_video_bytes
-
-
-def process_db_status(db_status: Union[int, str]) -> None:
-    if db_status == '1':
-        st.success("Connection successful")
-    else:
-        st.error("Cannot connect to db")
-    return
-
-
-def connect_to_db(db_name: str) -> Union[None, DB_CONNECTION]:
-    db_status = None
-    db_name_ = None
-    if db_name == 'DVS Analytics':
-        db_name_ = DB_CONNECTION.FORECAST
-        db_status = get_db_status(db_name_.value)
-    elif db_name == "DVS Training":
-        db_name_ = DB_CONNECTION.PROD
-        db_status = get_db_status(db_name_.value)
-    elif db_name == "Mayo Clinic":
-        db_name_ = DB_CONNECTION.MAYO
-        db_status = get_db_status(db_name_.value)
-    elif db_name == "DVS Dev":
-        db_name_ = DB_CONNECTION.DEV
-        db_status = get_db_status(db_name_.value)
-    else:
-        return None
-
-    process_db_status(db_status)
-
-    return db_name_
-
 
 # Sidebar selection
 add_selectbox = st.sidebar.selectbox(
@@ -61,33 +31,14 @@ add_selectbox = st.sidebar.selectbox(
 )
 
 db_connection_name = None
+db_init_setup = None
 if add_selectbox != 'None':
-    db_connection_name = connect_to_db(add_selectbox)
+    db_init_setup = DB_setup(add_selectbox, st)
+    db_connection_name = db_init_setup.db_connection
 
 # Add tabs
 tab_player, tab_score, tab_report, tab_x_ray, tab_compare, tab_admin, tab_logout = st.tabs(
         ["Player", "Score", "Report", "X-RAY", "Compare", "Admin", "Logout"])
-
-# Init setup
-# Facility dict
-facility_dict = get_facility_dict(db_connection_name.value)
-rev_facility_dict = {v: k for k, v in facility_dict.items()}
-
-# Trainer dict
-trainer_dict = get_trainer_dict(db_connection_name.value)
-rev_trainer_dict = {v: k for k, v in trainer_dict.items()}
-
-# Team dict
-team_dict = get_team_dict(db_connection_name.value)
-rev_team_dict = {v: k for k, v in team_dict.items()}
-
-# Organization dict
-organization_dict = get_org_dict(db_connection_name.value)
-rev_organization_dict = {v: k for k, v in organization_dict.items()}
-
-# Analyst dict
-analyst_dict = get_analyst_dict(db_connection_name.value)
-rev_analyst_dict = {v: k for k, v in analyst_dict.items()}
 
 
 def check_required_fields(*args):
@@ -116,9 +67,14 @@ def submit_player_to_add(db_name: str, table_name: str, pk: str,
         st.stop()
 
     # Perform the insert
-    add_player_to_db(db_name=db_name, pk=pk_to_insert, payload=payload_object)
+    status_int = add_player_to_db(db_name=db_name, pk=pk_to_insert, payload=payload_object)
 
-    return True
+    if status_int == 200:
+        st.success(f"Player (dvs_client_id:{pk_to_insert}) successfully added to {db_name}")
+        return True
+    else:
+        st.error(f"Error adding player to db due to status code: {status_int}")
+        return False
 
 
 # Player tab
@@ -150,11 +106,12 @@ with tab_player.expander("Add new player"):
 
     if db_connection_name != DB_CONNECTION.FORECAST:
         email = form_add_player.text_input(label="Email*", value=None)
-        trainer = form_add_player.selectbox(label="Trainer*", options=list(trainer_dict.values()))
-        facility = form_add_player.selectbox(label="Facility*", options=list(facility_dict.values()))
-        organization = form_add_player.selectbox(label="Organization*", options=list(organization_dict.values()))
+        trainer = form_add_player.selectbox(label="Trainer*", options=list(db_init_setup.trainer_dict.values()))
+        facility = form_add_player.selectbox(label="Facility*", options=list(db_init_setup.facility_dict.values()))
+        organization = form_add_player.selectbox(label="Organization*",
+                                                 options=list(db_init_setup.organization_dict.values()))
 
-    team = form_add_player.selectbox(label="Team*", options=list(team_dict.values()))
+    team = form_add_player.selectbox(label="Team*", options=list(db_init_setup.team_dict.values()))
     position = form_add_player.selectbox(label="Position", options=["Starter", "Reliever"])
     throws = form_add_player.selectbox(label="Throws", options=["Left", "Right"])
 
@@ -197,14 +154,18 @@ with tab_player.expander("Add new player"):
                                                                    birthday=birthdate, birthyear=birthyear,
                                                                    workout_id=workout_id, position=position[0],
                                                                    current_organization=organization[3:],
-                                                                   dvs_trainer_id=int(rev_trainer_dict[trainer]),
-                                                                   dvs_facility_id=int(rev_facility_dict[facility]),
+                                                                   dvs_trainer_id=int(
+                                                                           db_init_setup.reverse_trainer_dict[trainer]),
+                                                                   dvs_facility_id=int(
+                                                                           db_init_setup.reverse_facility_dict[
+                                                                               facility]),
                                                                    current_team=team,
                                                                    client_email=email, client_phone=phone,
-                                                                   org_id=organization[0], team_id=team[0])
+                                                                   org_id=db_init_setup.reverse_organization_dict[organization],
+                                                                   team_id=db_init_setup.reverse_team_dict[team])
             submit_player_to_add(db_connection_name.value, 'dvs_client', 'dvs_client_id',
                                  payload_object=add_player_object)
-            st.success(f"Added player to {db_connection_name.value}")
+
 
         # else:
         #     # Create a forecast payload object
@@ -371,9 +332,13 @@ def insert_eval_info(db_name: str, table_name: str, pk: str,
         st.stop()
 
     # Perform the insert
-    add_eval_info_to_db(db_name=db_name, eval_id=pk_to_insert, payload=payload_object)
+    response_status = add_eval_info_to_db(db_name=db_name, eval_id=pk_to_insert, payload=payload_object)
 
-    return True
+    if response_status == 200:
+        return True
+    else:
+        st.error(f"There has been a problem while db insert with an error status: {response_status}")
+        st.stop()
 
 
 with tab_player.expander('Add bio and performance data'):
@@ -393,19 +358,19 @@ with tab_player.expander('Add bio and performance data'):
                 form_add_bio = st.form(key='add_bio')
                 eval_date = form_add_bio.date_input(label='Eval Date*').strftime('%Y-%m-%d')
 
-                trainer_list = list(trainer_dict.values())
+                trainer_list = list(db_init_setup.trainer_dict.values())
                 trainer = form_add_bio.selectbox(label="DVS Trainer", options=trainer_list)
 
-                height_in = form_add_bio.text_input(label='Height (in)*')
-                weight_lbs = form_add_bio.text_input(label='Weight (lbs)*')
-                avg_fb_velo = form_add_bio.text_input(label='Avg FB Velo')
-                max_fb_velo = form_add_bio.text_input(label='Max FB Velo')
-                avg_fb_spin_rate = form_add_bio.text_input(label='Avg FB Spin Rate')
-                max_fb_spin_rate = form_add_bio.text_input(label='Max FB Spin Rate')
-                avg_cb_velo = form_add_bio.text_input(label='Avg CB Velo')
-                max_cb_velo = form_add_bio.text_input(label='Max CB Velo')
-                avg_cb_spin_rate = form_add_bio.text_input(label='Avg CB Spin Rate')
-                max_cb_spin_rate = form_add_bio.text_input(label='Max CB Spin Rate')
+                height_in = form_add_bio.number_input(label='Height (in)*')
+                weight_lbs = form_add_bio.number_input(label='Weight (lbs)*')
+                avg_fb_velo = form_add_bio.number_input(label='Avg FB Velo', value=-1.0)
+                max_fb_velo = form_add_bio.number_input(label='Max FB Velo', value=-1.0)
+                avg_fb_spin_rate = form_add_bio.number_input(label='Avg FB Spin Rate', value=-1.0)
+                max_fb_spin_rate = form_add_bio.number_input(label='Max FB Spin Rate', value=-1.0)
+                avg_cb_velo = form_add_bio.number_input(label='Avg CB Velo', value=-1.0)
+                max_cb_velo = form_add_bio.number_input(label='Max CB Velo', value=-1.0)
+                avg_cb_spin_rate = form_add_bio.number_input(label='Avg CB Spin Rate', value=-1.0)
+                max_cb_spin_rate = form_add_bio.number_input(label='Max CB Spin Rate', value=-1.0)
 
                 st.text('*Required')
 
@@ -421,7 +386,7 @@ with tab_player.expander('Add bio and performance data'):
                         st.stop()
 
                     payload = Insert_dvs_eval_payload(eval_date=eval_date,
-                                                      dvs_trainer_id=int(rev_trainer_dict[trainer]),
+                                                      dvs_trainer_id=int(db_init_setup.reverse_trainer_dict[trainer]),
                                                       height=float(height_in), weight=float(weight_lbs),
                                                       dvs_client_id=selected_rows[0]['dvs_client_id'],
                                                       fb_velocity_avg=avg_fb_velo,
@@ -451,9 +416,13 @@ def insert_eval_rom(db_name, table_name, pk, payload_obj: Insert_dvs_eval_rom):
         st.stop()
 
     # Perform the insert
-    add_eval_rom_to_db(db_name=db_name, eval_id=pk_to_insert, payload=payload_obj)
+    response_status = add_eval_rom_to_db(db_name=db_name, eval_id=pk_to_insert, payload=payload_obj)
 
-    return True
+    if response_status == 200:
+        return True
+    else:
+        st.error(f"There has been a problem while db insert with an error status: {response_status}")
+        st.stop()
 
 
 with tab_player.expander('Add range of motion data'):
@@ -473,7 +442,7 @@ with tab_player.expander('Add range of motion data'):
                 form_add_motion = st.form(key='add_motion')
                 eval_date = form_add_motion.date_input(label='Eval Date*').strftime('%Y-%m-%d')
 
-                trainer_list = list(trainer_dict.values())
+                trainer_list = list(db_init_setup.trainer_dict.values())
                 trainer = form_add_motion.selectbox(label="DVS Trainer", options=trainer_list)
 
                 d_ir = form_add_motion.number_input(label='D_IR', value=-1)
@@ -508,7 +477,7 @@ with tab_player.expander('Add range of motion data'):
                         st.stop()
 
                     payload = Insert_dvs_eval_rom(eval_date=eval_date, dvs_client_id=selected_rows[0]['dvs_client_id'],
-                                                  dvs_trainer_id=int(rev_trainer_dict[trainer]),
+                                                  dvs_trainer_id=int(db_init_setup.reverse_trainer_dict[trainer]),
                                                   dir=d_ir, der=d_er, ndir=nd_ir, nder=nd_er, dtam=d_tam, ndtam=nd_tam,
                                                   dflex=d_flex, ndflex=nd_flex, d_cuff_strength=d_cuff_str,
                                                   kibler=kibler, nd_cuff_strength=nd_cuff_str,
@@ -584,7 +553,7 @@ with tab_score.expander('Add new DVS Score'):
 
             # TODO Waiting on permissions for dvs_client table on dvs_forecast db
             dvs_analyst = form_add_score.selectbox(label='DVS Analyst',
-                                                   options=analyst_dict.values())
+                                                   options=db_init_setup.analyst_dict.values())
 
             mm_score = form_add_score.number_input(label='MM_SCORE*', value=-1)
             mm_stop = form_add_score.number_input(label='MM_STOP', value=-1)
@@ -646,7 +615,8 @@ with tab_score.expander('Add new DVS Score'):
                     st.stop()
 
                 payload = Insert_dvs_score(dvs_client_id=selected_rows[0]['dvs_client_id'], score_date=score_date,
-                                           dvs_analyst_id=rev_analyst_dict[dvs_analyst], mm_score=mm_score,
+                                           dvs_analyst_id=db_init_setup.reverse_analyst_dict.get(dvs_analyst, -1),
+                                           mm_score=mm_score,
                                            mm_stop=mm_stop, mm_deg=mm_deg,
                                            as_score=as_score, as_r=as_r, as_h=as_h, as_b=as_b, as_r_deg=as_r_deg,
                                            as_h_deg=as_h_deg, p_score=p_score, p_flex_deg=p_flex_deg,
@@ -866,7 +836,7 @@ with tab_admin:
             first_name = form_add_trainer_admin.text_input(label='First name*')
             last_name = form_add_trainer_admin.text_input(label='Last name*')
             email = form_add_trainer_admin.text_input(label='Email')
-            facility = form_add_trainer_admin.selectbox(label='Facility*', options=facility_dict.values())
+            facility = form_add_trainer_admin.selectbox(label='Facility*', options=db_init_setup.facility_dict.values())
             phone = form_add_trainer_admin.text_input(label='Phone')
 
             form_add_trainer_admin.markdown('*Required')
@@ -889,7 +859,8 @@ with tab_admin:
                     st.stop()
 
                 payload_obj = DVS_trainer(trainer_lastname=last_name, trainer_firstname=first_name,
-                                          dvs_facility_id=int(rev_facility_dict[facility]), trainer_phone=phone,
+                                          dvs_facility_id=int(db_init_setup.reverse_facility_dict[facility]),
+                                          trainer_phone=phone,
                                           trainer_email=email)
                 insert_into_dvs_facility(db_name=db_connection_name.value, table_name='dvs_facility',
                                          pk='dvs_facility_id',
@@ -992,9 +963,9 @@ with tab_admin:
             team_email = form_add_team_admin.text_input(label='Email')
             team_website = form_add_team_admin.text_input(label='Website')
             team_facility = form_add_team_admin.selectbox(label='Facility',
-                                                          options=list(team_dict.values()))
+                                                          options=list(db_init_setup.team_dict.values()))
             team_trainer = form_add_team_admin.selectbox(label='Trainer',
-                                                         options=list(team_dict.values()))
+                                                         options=list(db_init_setup.team_dict.values()))
 
             form_add_team_admin.markdown('*Required')
             submit_add_team = form_add_team_admin.form_submit_button(label='SUBMIT')
@@ -1013,12 +984,13 @@ with tab_admin:
                     st.error('This team already exists in the database. Please try a different team name')
                     st.stop()
                 #
-                payload_obj = DVS_team(org_id=rev_organization_dict[organization_name_], team_name=team_name,
+                payload_obj = DVS_team(org_id=db_init_setup.reverse_organization_dict[organization_name_],
+                                       team_name=team_name,
                                        team_address=team_address, team_city=team_city, team_state=team_state,
                                        team_postcode=team_postcode, team_country=team_country, team_phone=team_phone,
                                        team_email=team_email, team_website=team_website,
-                                       dvs_facility_id=rev_facility_dict.get(team_facility, -1),
-                                       dvs_trainer_id=rev_trainer_dict.get(team_trainer, -1))
+                                       dvs_facility_id=db_init_setup.reverse_facility_dict.get(team_facility, -1),
+                                       dvs_trainer_id=db_init_setup.reverse_trainer_dict.get(team_trainer, -1))
                 insert_into_dvs_team(db_name=db_connection_name.value, table_name='dvs_team', pk='team_id',
                                      payload=payload_obj)
                 st.success('Team has been successfully added!')
@@ -1037,8 +1009,6 @@ def show_page():
     # uploaded
     raw_video_file = st.file_uploader("Choose a video file (in mp4 or mov format)",
                                       type=['mp4', 'mov'])
-
-
 
     if raw_video_file is not None:
         st.markdown("## Uploaded video")
@@ -1075,8 +1045,6 @@ def show_page():
 
 with tab_x_ray:
     show_page()
-
-
 
 # Compare tab
 with tab_compare:
