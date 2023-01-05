@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 
 @dataclass
-class Insert_player_payload_non_forecast:
+class Player_payload_non_forecast:
     client_lastname: str
     client_firstname: str
     throws: str
@@ -22,6 +22,22 @@ class Insert_player_payload_non_forecast:
     jersey_number: int = 0
     high_school: str = ""
     college: str = ""
+
+
+@dataclass
+class Player_payload_forecast:
+    first_name: str
+    last_name: str
+    birthdate: str
+    birth_year: int
+    team: str
+    position: str
+    throwing_hand: str
+    height: float
+    weight: float
+    retired: int
+    mlbamid: str = ""
+    name_suffix: str = ""
 
 
 @dataclass
@@ -59,6 +75,7 @@ class Insert_dvs_eval_payload:
     FMS_TOTAL: float = -1.0
     release_height: float = -1.0
 
+
 @dataclass
 class Insert_dvs_eval_rom:
     eval_date: str
@@ -89,44 +106,45 @@ class Insert_dvs_score:
     score_date: str
     dvs_analyst_id: int
     mm_score: int = -1
-    mm_stop: int= -1
-    mm_deg: float= -1
-    as_score: int= -1
-    as_r: int= -1
-    as_h: int= -1
-    as_b: int= -1
-    p_score: int= -1
-    p_flex_deg: float= -1
-    p_ext_deg: float= -1
-    pafs_score: int= -1
-    pafs_below: int= -1
-    pafs_vert: int= -1
-    pafs_spine: int= -1
-    pafs_dir: int= -1
-    paa_score: int= -1
-    paa_deg: float= -1
-    paa_os: int= -1
-    f_score: int= -1
-    f_bf: int= -1
-    f_par: int= -1
-    f_oh: int= -1
-    f_hd: int= -1
-    total_dvs_score: float= -1
-    pdf_report_filepath: str= -1
-    as_r_deg: float= -1
-    as_h_deg: float= -1
-    p_chg_deg: float= -1
-    pafs_vstrike_deg: float= -1
-    pafs_stretch_deg: float= -1
-    paa_bow_deg: float= -1
-    ap1_score: float= -1
-    pafs_vert_deg: float= -1
-    paa_spine_deg: float= -1
-    paa_chest_deg: float= -1
-    paa_vext_deg: float= -1
-    f_par_deg: float= -1
-    f_oh_deg: float= -1
-    pafs_horiz_deg: float= -1
+    mm_stop: int = -1
+    mm_deg: float = -1
+    as_score: int = -1
+    as_r: int = -1
+    as_h: int = -1
+    as_b: int = -1
+    p_score: int = -1
+    p_flex_deg: float = -1
+    p_ext_deg: float = -1
+    pafs_score: int = -1
+    pafs_below: int = -1
+    pafs_vert: int = -1
+    pafs_spine: int = -1
+    pafs_dir: int = -1
+    paa_score: int = -1
+    paa_deg: float = -1
+    paa_os: int = -1
+    f_score: int = -1
+    f_bf: int = -1
+    f_par: int = -1
+    f_oh: int = -1
+    f_hd: int = -1
+    total_dvs_score: float = -1
+    pdf_report_filepath: str = -1
+    as_r_deg: float = -1
+    as_h_deg: float = -1
+    p_chg_deg: float = -1
+    pafs_vstrike_deg: float = -1
+    pafs_stretch_deg: float = -1
+    paa_bow_deg: float = -1
+    ap1_score: float = -1
+    pafs_vert_deg: float = -1
+    paa_spine_deg: float = -1
+    paa_chest_deg: float = -1
+    paa_vext_deg: float = -1
+    f_par_deg: float = -1
+    f_oh_deg: float = -1
+    pafs_horiz_deg: float = -1
+
 
 @dataclass
 class DVS_trainer:
@@ -166,6 +184,7 @@ class DVS_organization:
     license_type: str
     license_expiration: str = '2050-01-01'
 
+
 @dataclass
 class DVS_team:
     org_id: int
@@ -182,4 +201,3 @@ class DVS_team:
     dvs_trainer_id: int = -1
     license_expiraton: str = '2050-01-01'
     license_type: str = 'NA'
-

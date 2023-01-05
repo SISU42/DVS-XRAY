@@ -9,8 +9,8 @@ import json
 
 from db_connection import DB_CONNECTION
 
-from payloads import Insert_player_payload_non_forecast, Insert_dvs_eval_payload, Insert_dvs_eval_rom, Insert_dvs_score, \
-    DVS_trainer, DVS_facility, DVS_organization, DVS_team
+from payloads import Player_payload_non_forecast, Insert_dvs_eval_payload, Insert_dvs_eval_rom, Insert_dvs_score, \
+    DVS_trainer, DVS_facility, DVS_organization, DVS_team, Player_payload_forecast
 
 MLB_TEAMS = ['SEA', 'WAS', 'BAL', 'CLE', 'ANA', 'NYN', 'SDN', 'TEX', 'ARI', 'CHA', 'HOU', 'MIL', 'PHI', 'SLN', 'BOS',
              'COL', 'LAN', 'NYA', 'SFN', 'TOR', 'ATL', 'CIN', 'KCA', 'MIN', 'PIT', 'TBA', 'CHN', 'DET', 'MIA', 'OAK']
@@ -44,7 +44,6 @@ def get_db_status(db_name: str) -> str:
                                  f"Please contact admin.")
 
 
-
 def get_trainer_dict(db_name: str) -> Dict[int, str]:
     """
     Get all the trainers list based on db_name
@@ -58,7 +57,10 @@ def get_trainer_dict(db_name: str) -> Dict[int, str]:
     }
     payload = {}
     response = requests.request("GET", url, headers=headers, data=payload)
-    return {int(i['dvs_trainer_id']): f"{i['trainer_firstname']} {i['trainer_lastname']}" for i in response.json()}
+    result = {int(i['dvs_trainer_id']): f"{i['trainer_firstname']} {i['trainer_lastname']}" for i in response.json()}
+    result[-1] = ""
+    result[-2] = None
+    return result
 
 
 def get_facility_dict(db_name: str) -> Dict[int, str]:
@@ -75,8 +77,10 @@ def get_facility_dict(db_name: str) -> Dict[int, str]:
     }
 
     response = requests.request("GET", url, headers=headers, data=payload)
-
-    return {int(i['dvs_facility_id']): f"{i['facility_name']}" for i in response.json()}
+    result = {int(i['dvs_facility_id']): f"{i['facility_name']}" for i in response.json()}
+    result[-1] = ""
+    result[-2] = None
+    return result
 
 
 def get_team_dict(db_name: str) -> Dict[int, str]:
@@ -85,8 +89,14 @@ def get_team_dict(db_name: str) -> Dict[int, str]:
     :param db_name:
     :return:
     """
+    result = dict()
+    result[-1] = ""
+    result[-2] = None
+    result[-3] = 'None'
+
     if db_name == DB_CONNECTION.FORECAST.value:
-        return {index:value for index, value in enumerate(MLB_TEAMS)}
+        result.update({index: value for index, value in enumerate(MLB_TEAMS)})
+        return result
     else:
         url = f"https://deliveryvaluesystemapidev.azurewebsites.net/team_list/{db_name}"
 
@@ -94,10 +104,9 @@ def get_team_dict(db_name: str) -> Dict[int, str]:
         headers = {
             'access_token': 'dv$2022'
         }
-
         response = requests.request("GET", url, headers=headers, data=payload)
-
-        return {int(i['team_id']): f"{i['team_name']}" for i in response.json()}
+        result.update({int(i['team_id']): f"{i['team_name']}" for i in response.json()})
+        return result
 
 
 def get_org_dict(db_name: str) -> Dict[int, str]:
@@ -115,7 +124,12 @@ def get_org_dict(db_name: str) -> Dict[int, str]:
 
     response = requests.request("GET", url, headers=headers, data=payload)
 
-    return {int(i['org_id']): f"{i['org_name']}" for i in response.json()}
+    result = {int(i['org_id']): f"{i['org_name']}" for i in response.json()}
+    result[-1] = ""
+    result[-2] = None
+    result[42] = "DVS Baseball"
+
+    return result
 
 
 def get_analyst_dict(db_name: str) -> Dict[int, str]:
@@ -302,7 +316,7 @@ def generate_primary_key(pk: str, table_name: str, db_name: str) -> int:
         return int(response) + 1
 
 
-def add_player_to_db(db_name: str, pk: int, payload: Insert_player_payload_non_forecast) -> int:
+def add_player_to_db(db_name: str, pk: int, payload: Player_payload_non_forecast) -> int:
     """
     Add a player to the db
     :param payload:
@@ -319,6 +333,40 @@ def add_player_to_db(db_name: str, pk: int, payload: Insert_player_payload_non_f
 
     response = requests.request("POST", url, headers=headers, data=json.dumps(payload.__dict__))
 
+    return response.status_code
+
+
+def update_client_on_db(db_name: str, client_id: int, payload: Player_payload_non_forecast) -> int:
+    """
+    Update client on dvs_client
+    :param db_name:
+    :param client_id:
+    :param payload:
+    :return:
+    """
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/update_dvs_client/{client_id}/{db_name}"
+
+    headers = {
+        'Content-Type': 'application/json',
+    }
+    response = requests.request("POST", url, headers=headers, data=json.dumps(payload.__dict__))
+    return response.status_code
+
+
+def update_player_on_db(db_name: str, player_id: int, payload: Player_payload_forecast) -> int:
+    """
+    Update player on dvs_player on dvs_forecast
+    :param db_name:
+    :param player_id:
+    :param payload:
+    :return:
+    """
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/update_dvs_player/{player_id}/{db_name}"
+
+    headers = {
+        'Content-Type': 'application/json',
+    }
+    response = requests.request("POST", url, headers=headers, data=json.dumps(payload.__dict__))
     return response.status_code
 
 

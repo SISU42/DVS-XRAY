@@ -13,14 +13,15 @@ from db_connection import DB_CONNECTION
 
 from db_setup import DB_setup
 
-from payloads import Insert_player_payload_non_forecast, Insert_dvs_eval_payload, Insert_dvs_eval_rom, Insert_dvs_score, \
-    DVS_trainer, DVS_facility, DVS_organization, DVS_team
+from payloads import Player_payload_non_forecast, Insert_dvs_eval_payload, Insert_dvs_eval_rom, Insert_dvs_score, \
+    DVS_trainer, DVS_facility, DVS_organization, DVS_team, Player_payload_forecast
 
 from api_calls import get_db_status, get_trainer_dict, get_facility_dict, get_team_dict, get_org_dict, \
     get_workout_list, get_dvs_client_table, get_workout_id_name_dict, get_dvs_player_table, \
     get_dvs_score, check_duplicates, generate_primary_key, add_player_to_db, add_eval_info_to_db, add_eval_rom_to_db, \
     add_dvs_score_to_db, get_analyst_dict, check_trainer_exists, add_trainer_to_db, check_facility_exists, \
-    add_facility_to_db, check_org_exists, check_team_exists, add_team_to_db, DBCONNECTException
+    add_facility_to_db, check_org_exists, check_team_exists, add_team_to_db, DBCONNECTException, update_client_on_db, \
+    update_player_on_db
 
 from msk.uploaded_video_file import UploadedFile, uploaded_videos_dir_name, upload_video, video_exists, get_video_bytes
 
@@ -58,7 +59,7 @@ def check_required_fields(*args):
 
 
 def submit_player_to_add(db_name: str, table_name: str, pk: str,
-                         payload_object: Insert_player_payload_non_forecast) -> bool:
+                         payload_object: Player_payload_non_forecast) -> bool:
     # Generate primary key
     pk_to_insert = generate_primary_key(pk, table_name, db_name)
 
@@ -74,6 +75,48 @@ def submit_player_to_add(db_name: str, table_name: str, pk: str,
         return True
     else:
         st.error(f"Error adding player to db due to status code: {status_int}")
+        return False
+
+
+def submit_client_to_update(db_name: str, dvs_client_id: int, payload_object: Player_payload_non_forecast) -> bool:
+    """
+    :param db_name:
+    :param table_name:
+    :param pk:
+    :param payload_object:
+    :return:
+    """
+
+    # Perform the update
+    status_int = update_client_on_db(db_name, dvs_client_id, payload_object)
+
+    if status_int == 200:
+        st.success(f"Player (dvs_client_id:{dvs_client_id}) successfully updated!")
+        return True
+    else:
+        st.error(f"Error updating client to db due to status code: {status_int}")
+        st.error(f"Client not updated")
+        return False
+
+
+def submit_player_to_update(db_name: str, dvs_player_id: int, payload_object: Player_payload_forecast) -> bool:
+    """
+    :param db_name:
+    :param table_name:
+    :param pk:
+    :param payload_object:
+    :return:
+    """
+
+    # Perform the update
+    status_int = update_player_on_db(db_name, dvs_player_id, payload_object)
+
+    if status_int == 200:
+        st.success(f"Player (dvs_client_id:{dvs_player_id}) successfully updated!")
+        return True
+    else:
+        st.error(f"Error adding player to db due to status code: {status_int}")
+        st.error(f"Player not updated")
         return False
 
 
@@ -149,23 +192,23 @@ with tab_player.expander("Add new player"):
         # Submit to DB
         if db_connection_name != DB_CONNECTION.FORECAST:
             # Create a non forecast payload object
-            add_player_object = Insert_player_payload_non_forecast(client_firstname=first_name,
-                                                                   client_lastname=last_name, throws=throws[0],
-                                                                   birthday=birthdate, birthyear=birthyear,
-                                                                   workout_id=workout_id, position=position[0],
-                                                                   current_organization=organization[3:],
-                                                                   dvs_trainer_id=int(
-                                                                           db_init_setup.reverse_trainer_dict[trainer]),
-                                                                   dvs_facility_id=int(
-                                                                           db_init_setup.reverse_facility_dict[
-                                                                               facility]),
-                                                                   current_team=team,
-                                                                   client_email=email, client_phone=phone,
-                                                                   org_id=db_init_setup.reverse_organization_dict[organization],
-                                                                   team_id=db_init_setup.reverse_team_dict[team])
+            add_player_object = Player_payload_non_forecast(client_firstname=first_name,
+                                                            client_lastname=last_name, throws=throws[0],
+                                                            birthday=birthdate, birthyear=birthyear,
+                                                            workout_id=workout_id, position=position[0],
+                                                            current_organization=organization[3:],
+                                                            dvs_trainer_id=int(
+                                                                    db_init_setup.reverse_trainer_dict[trainer]),
+                                                            dvs_facility_id=int(
+                                                                    db_init_setup.reverse_facility_dict[
+                                                                        facility]),
+                                                            current_team=team,
+                                                            client_email=email, client_phone=phone,
+                                                            org_id=db_init_setup.reverse_organization_dict[
+                                                                organization],
+                                                            team_id=db_init_setup.reverse_team_dict[team])
             submit_player_to_add(db_connection_name.value, 'dvs_client', 'dvs_client_id',
                                  payload_object=add_player_object)
-
 
         # else:
         #     # Create a forecast payload object
@@ -227,91 +270,161 @@ def strip_id_from_name(str_: str) -> Optional[str]:
         return None
 
 
-# with tab_player.expander('Edit existing player'):
-#     # Add a search box
-#     last_name_search = st.text_input(label="Search by last name: ", max_chars=50)
-#
-#     # Last name condition to display agg table
-#     if len(last_name_search) != 0:
-#         grid_response = get_dvs_client_table(db_connection_name.value, last_name_search, key_=last_name_search)
-#
-#         selected_rows = grid_response['selected_rows']
-#
-#         if len(selected_rows) != 0:
-#             form = st.form(key='edit_player')
-#             selected_row = selected_rows[0]
-#
-#             first_name = form.text_input(label="First name*", value=selected_row['client_firstname'])
-#             last_name = form.text_input(label="Last name*", value=selected_row['client_lastname'])
-#
-#             if db_connection_name == DB_CONNECTION.FORECAST:
-#                 suffix = form.text_input(label="Suffix")
-#
-#             birthdate = form.date_input(label="Birthdate*", value=datetime.fromisoformat(selected_row['birthday']))
-#
-#             if db_connection_name != DB_CONNECTION.FORECAST:
-#                 email = form.text_input(label="Email*", value=selected_row['client_email'])
-#
-#                 trainer_list = list(trainer_dict.values())
-#                 trainer = form.selectbox(label="Trainer*", index=trainer_list.index(selected_row['trainer_name']),
-#                                          options=trainer_list)
-#
-#                 facility_list = list(facility_dict.values())
-#                 facility = form.selectbox(label="Facility*", index=facility_list.index(selected_row['facility_name']),
-#                                           options=facility_list)
-#
-#                 organization_list = list(organization_dict.values())
-#                 organization = form.selectbox(label="Organization*",
-#                                               index=get_index(organization_list, selected_row['current_organization']),
-#                                               options=organization_list)
-#
-#             team_list = list(team_dict.values())
-#             team = form.selectbox(label="Team*", index=get_index(team_list, selected_row['current_team']),
-#                                   options=team_list)
-#
-#             db_position = get_postion(selected_row["position"])
-#             position_list = ["Starter", "Reliever"]
-#             position = form.selectbox(label="Position", index=get_index(position_list, db_position),
-#                                       options=["Starter", "Reliever"])
-#
-#             db_throws = get_throws(selected_row["throws"])
-#             throws_list = ["Left", "Right"]
-#             throws = form.selectbox(label="Throws", index=get_index(throws_list, db_throws), options=["Left", "Right"])
-#
-#             if db_connection_name != DB_CONNECTION.FORECAST:
-#                 workout_id_name_dict = get_workout_id_name_dict(db_connection_name.value)
-#                 workout_list = get_workout_list(db_connection_name.value)
-#                 workout = form.selectbox(label="Workout*",
-#                                          index=get_index(workout_list,
-#                                                          workout_id_name_dict[selected_row['workout_id']]),
-#                                          options=workout_list)
-#
-#                 phone = form.text_input(label="Phone", value=selected_row['client_phone'], max_chars=12)
-#             else:
-#                 retired = form.selectbox(label='Retired*', options=['Yes', 'No'])
-#                 height_in = form.text_input(label='Height (in)*')
-#                 weight_lbs = form.text_input(label='Weight (lbs)*')
-#                 mlbamid = form.text_input(label='MLBAMID')
-#
-#             tab_player.text('*Required')
-#
-#             submit_form = form.form_submit_button(label="SUBMIT")
-#
-#             if submit_form:
-#                 req_fields = check_required_fields(first_name, last_name, birthdate,
-#                                                    email, trainer, facility, organization, team,
-#                                                    workout)
-#                 if not req_fields:
-#                     st.error('All required fields must be entered')
-#                     st.stop()
-#
-#                 # Check if player exists by checking birthday, first_name, last_name
-#                 duplicate_check = check_duplicates(db_connection_name.value, birthdate, first_name, last_name)
-#                 if not duplicate_check:
-#                     tab_player.error('This player exists in the database')
-#                     st.stop()
-#
-#                 # Update db
+def get_table(connection_name, last_name, key_):
+    if connection_name != DB_CONNECTION.FORECAST:
+        return get_dvs_client_table(connection_name.value, last_name, key_)
+    else:
+        return get_dvs_player_table(last_name, key_)
+
+
+with tab_player.expander('Edit existing player'):
+    # Add a search box
+    last_name_search = st.text_input(label="Search by last name: ", max_chars=50)
+
+    # Last name condition to display agg table
+    if len(last_name_search) != 0:
+        grid_response = get_table(db_connection_name, last_name_search, key_=last_name_search)
+
+        selected_rows = grid_response['selected_rows']
+
+        if len(selected_rows) != 0:
+            edit_player_form = st.form(key='edit_player')
+            selected_row = selected_rows[0]
+
+            if db_connection_name != DB_CONNECTION.FORECAST:
+                client_firstname = edit_player_form.text_input(label="First name*",
+                                                               value=selected_row['client_firstname'])
+                client_lastname = edit_player_form.text_input(label="Last name*", value=selected_row['client_lastname'])
+                birthdate = edit_player_form.date_input(label="Birthdate*",
+                                                        value=datetime.fromisoformat(selected_row['birthday']))
+                birthyear = int(birthdate.year)
+                birthdate = birthdate.strftime('%Y-%m-%d')
+
+                email = edit_player_form.text_input(label="Email*", value=selected_row['client_email'])
+
+                trainer_options = list(db_init_setup.trainer_dict.values())
+                trainer = edit_player_form.selectbox(label='Trainer*', options=trainer_options,
+                                                     index=trainer_options
+                                                     .index(selected_row.get('trainer_name', None).strip()))
+
+                facility_options = list(db_init_setup.facility_dict.values())
+                facility = edit_player_form.selectbox(label='Facility*', options=facility_options,
+                                                      index=facility_options
+                                                      .index(selected_row['facility_name']))
+
+                org_options = list(db_init_setup.organization_dict.values())
+                organization = edit_player_form.selectbox(label='Organization*', options=org_options,
+                                                          index=org_options.index(
+                                                              selected_row['current_organization'].strip()))
+
+                team_options = list(db_init_setup.team_dict.values())
+                team = edit_player_form.selectbox(label="Team*", options=team_options,
+                                                  index=team_options.index(selected_row['current_team']))
+
+                position_options = ['R', 'S']
+                position = edit_player_form.selectbox(label="Position", options=position_options,
+                                                      index=position_options.index(selected_row['position'].strip()))
+
+                throws_options = ['L', 'R']
+                throws = edit_player_form.selectbox(label="Throws", options=throws_options,
+                                                    index=throws_options.index(selected_row['throws']))
+
+                workout = edit_player_form.number_input(label="Workout*", value=selected_row['workout_id'])
+                phone = edit_player_form.text_input(label="Phone", value=selected_row['client_phone'])
+                active_flag_options = [0, 1]
+                active_flag = edit_player_form.selectbox(label="Active_flag", options=active_flag_options,
+                                                         index=active_flag_options.index(selected_row['active_flag']))
+
+                tab_player.text('*Required')
+                submit_form = edit_player_form.form_submit_button(label="SUBMIT")
+
+                if submit_form:
+                    req_fields = check_required_fields(client_firstname, client_lastname, birthdate,
+                                                       email, trainer, facility, organization, team,
+                                                       workout)
+                    if not req_fields:
+                        st.error('All required fields must be entered')
+                        st.stop()
+
+                    # Check if player exists by checking birthday, first_name, last_name
+                    duplicate_check = check_duplicates(db_connection_name.value, birthdate, client_firstname,
+                                                       client_lastname)
+                    if not duplicate_check:
+                        tab_player.error('This player exists in the database')
+                        st.stop()
+
+                    add_client_object = Player_payload_non_forecast(client_firstname=client_firstname,
+                                                                    client_lastname=client_lastname, throws=throws[0],
+                                                                    birthday=birthdate, birthyear=birthyear,
+                                                                    workout_id=workout_id, position=position[0],
+                                                                    current_organization=organization[3:],
+                                                                    dvs_trainer_id=int(
+                                                                            db_init_setup.reverse_trainer_dict[
+                                                                                trainer]),
+                                                                    dvs_facility_id=int(
+                                                                            db_init_setup.reverse_facility_dict[
+                                                                                facility]),
+                                                                    current_team=team,
+                                                                    client_email=email, client_phone=phone,
+                                                                    org_id=db_init_setup.reverse_organization_dict[
+                                                                        organization],
+                                                                    team_id=db_init_setup.reverse_team_dict[team])
+
+                    submit_client_to_update(db_connection_name.value, selected_row['dvs_client_id'], add_client_object)
+
+            else:
+                first_name = edit_player_form.text_input(label="First name*", value=selected_row['first_name'])
+                last_name = edit_player_form.text_input(label="Last name*", value=selected_row['last_name'])
+                name_suffix = edit_player_form.text_input(label="Suffix", value=selected_row['name_suffix'])
+                birthdate = edit_player_form.date_input(label="Birthdate*",
+                                                        value=datetime.fromisoformat(selected_row['birthdate']))
+                birth_year = int(birthdate.year)
+                birthdate = birthdate.strftime('%Y-%m-%d')
+
+                team_options_ = list(db_init_setup.team_dict.values())
+                team = edit_player_form.selectbox(label="Team*", options=team_options_,
+                                                  index=team_options_.index(selected_row['team']))
+
+                position_options = ["RP", "SP"]
+                position = edit_player_form.selectbox(label="Position*", options=position_options,
+                                                      index=position_options.index(selected_row["position"]))
+
+                throwing_hand_options = ["R", "L"]
+                throws = edit_player_form.selectbox(label="Throws*",
+                                                    options=throwing_hand_options,
+                                                    index=throwing_hand_options.index(selected_row["throwing_hand"]))
+
+                height = edit_player_form.text_input(label="height*", value=selected_row["height"])
+                weight = edit_player_form.text_input(label="weight*", value=selected_row["weight"])
+                mlbamid = edit_player_form.text_input(label="MLBAMID", value=selected_row["mlbamid"])
+
+                retired_options = [0, 1]
+                retired = edit_player_form.selectbox(label="Retired*", options=retired_options,
+                                                     index=retired_options.index(selected_row["retired"]))
+
+                tab_player.text('*Required')
+                submit_form = edit_player_form.form_submit_button(label="SUBMIT")
+
+                if submit_form:
+                    req_fields = check_required_fields(first_name, last_name, birthdate,
+                                                       team, position, throws, retired, height, weight)
+                    if not req_fields:
+                        st.error('All required fields must be entered')
+                        st.stop()
+
+                    # Check if player exists by checking birthday, first_name, last_name
+                    duplicate_check = check_duplicates(db_connection_name.value, birthdate, first_name, last_name)
+                    if not duplicate_check:
+                        tab_player.error('This player exists in the database')
+                        st.stop()
+
+                    add_player_object = Player_payload_forecast(first_name=first_name, last_name=last_name,
+                                                                birthdate=birthdate, birth_year=birth_year, team=team,
+                                                                position=position, throwing_hand=throws,
+                                                                height=height, weight=weight, mlbamid=mlbamid,
+                                                                retired=retired, name_suffix=name_suffix)
+
+                    submit_player_to_update(db_connection_name.value, selected_row['dvs_player_id'], add_player_object)
 
 
 def insert_eval_info(db_name: str, table_name: str, pk: str,
