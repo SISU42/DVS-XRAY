@@ -361,7 +361,7 @@ def update_player_on_db(db_name: str, player_id: int, payload: Player_payload_fo
     :param payload:
     :return:
     """
-    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/update_dvs_player/{player_id}/{db_name}"
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/edit/update_dvs_player/{player_id}/{db_name}"
 
     headers = {
         'Content-Type': 'application/json',
