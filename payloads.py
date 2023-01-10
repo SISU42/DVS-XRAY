@@ -181,7 +181,7 @@ class DVS_organization:
     org_phone: str
     org_email: str
     org_website: str
-    license_type: str
+    license_type: str = 'NA'
     license_expiration: str = '2050-01-01'
 
 

@@ -21,7 +21,8 @@ from api_calls import get_db_status, get_trainer_dict, get_facility_dict, get_te
     get_dvs_score, check_duplicates, generate_primary_key, add_player_to_db, add_eval_info_to_db, add_eval_rom_to_db, \
     add_dvs_score_to_db, get_analyst_dict, check_trainer_exists, add_trainer_to_db, check_facility_exists, \
     add_facility_to_db, check_org_exists, check_team_exists, add_team_to_db, DBCONNECTException, update_client_on_db, \
-    update_player_on_db, update_trainer_on_db, get_dvs_trainer_table, get_dvs_facility_table, update_facility_on_db
+    update_player_on_db, update_trainer_on_db, get_dvs_trainer_table, get_dvs_facility_table, update_facility_on_db, \
+    get_dvs_org_table, update_org_on_db, get_dvs_team_table, update_team_on_db
 
 from msk.uploaded_video_file import UploadedFile, uploaded_videos_dir_name, upload_video, video_exists, get_video_bytes
 
@@ -918,6 +919,18 @@ def update_dvs_facility(db_name: str, dvs_facility_id: int, payload: DVS_facilit
     return True
 
 
+def update_dvs_org(db_name: str, dvs_org_id: int, payload: DVS_organization):
+    """
+    Update the facility row given a facility id
+    :param db_name:
+    :param dvs_org_id:
+    :param payload:
+    :return:
+    """
+    update_org_on_db(payload, dvs_org_id, db_name)
+    return True
+
+
 def insert_into_dvs_facility(db_name, table_name, pk, payload):
     # Generate primary key
     pk_to_insert = generate_primary_key(pk, table_name, db_name)
@@ -961,6 +974,17 @@ def insert_into_dvs_team(db_name, table_name, pk, payload):
     # Perform the insert
     add_team_to_db(db_name=db_name, team_id=pk_to_insert, payload=payload)
 
+    return True
+
+def update_dvs_team(db_name: str, team_id: int, payload: DVS_team):
+    """
+    Update the team row given a team id
+    :param db_name:
+    :param team_id:
+    :param payload:
+    :return:
+    """
+    update_team_on_db(payload, team_id, db_name)
     return True
 
 
@@ -1126,8 +1150,8 @@ with tab_admin:
                                                    facility_address=address, facility_city=city, facility_state=state,
                                                    facility_country=country, facility_postcode=post_code)
                         update_dvs_facility(db_name=db_connection_name.value,
-                                           dvs_facility_id=selected_row['dvs_facility_id'],
-                                           payload=payload_obj)
+                                            dvs_facility_id=selected_row['dvs_facility_id'],
+                                            payload=payload_obj)
                         st.success('Facility has been successfully updated!')
 
         with tab_admin.expander('Add organinzation'):
@@ -1167,8 +1191,45 @@ with tab_admin:
                                     payload=payload_obj)
                 st.success('Organization has been successfully added!')
 
-        # with tab_admin.expander('Edit existing organization'):
-        #     pass
+        with tab_admin.expander('Edit existing organization'):
+            # Add a search box
+            last_name_search = st.text_input(label="Search by last name: ", max_chars=50, key='edit_organization')
+            if len(last_name_search) != 0:
+                grid_response = get_dvs_org_table(db_connection_name.value, last_name_search,
+                                                  key_=f"{last_name_search}_edit_facility")
+                selected_rows = grid_response['selected_rows']
+
+                if len(selected_rows) != 0:
+                    selected_row = selected_rows[0]
+                    form_edit_org = st.form(key="edit_org")
+                    org_name = form_edit_org.text_input(label='Name*', value=selected_row['org_name'])
+                    org_address = form_edit_org.text_input(label='Address', value=selected_row['org_address'])
+                    org_city = form_edit_org.text_input(label='City', value=selected_row['org_city'])
+                    org_state = form_edit_org.text_input(label='State', value=selected_row['org_state'])
+                    org_country = form_edit_org.text_input(label='Country', value=selected_row['org_country'])
+                    org_postcode = form_edit_org.text_input(label='Postcode',
+                                                            value=selected_row['org_postcode'])
+                    org_president = form_edit_org.text_input(label='President', value=selected_row['org_president'])
+                    org_phone = form_edit_org.text_input(label='Phone', value=selected_row['org_phone'])
+                    org_email = form_edit_org.text_input(label='Email', value=selected_row['org_email'])
+                    org_website = form_edit_org.text_input(label='Website', value=selected_row['org_website'])
+                    form_edit_org.markdown('*Required')
+                    submit_edit_org = form_edit_org.form_submit_button(label='SUBMIT')
+                    if submit_edit_org:
+                        # Check if all required fields are entered
+                        req_fields = check_required_fields(org_name)
+
+                        # Check for required fields
+                        if not req_fields:
+                            st.error('All required fields must be entered')
+                            st.stop()
+
+                        payload_obj = DVS_organization(org_name, org_address, org_city, org_state, org_postcode,
+                                                       org_country, org_president, org_phone, org_email, org_website)
+                        update_dvs_org(db_name=db_connection_name.value,
+                                                dvs_org_id=selected_row['org_id'],
+                                                payload=payload_obj)
+                        st.success('Organization has been successfully updated!')
 
         with tab_admin.expander('Add team'):
             form_add_team_admin = st.form(key='add_team_admin')
@@ -1216,8 +1277,68 @@ with tab_admin:
                                      payload=payload_obj)
                 st.success('Team has been successfully added!')
 
-        # with tab_admin.expander('Edit existing team'):
-        #     pass
+        with tab_admin.expander('Edit existing team'):
+            # Add a search box
+            last_name_search = st.text_input(label="Search by last name: ", max_chars=50, key='edit_team')
+            if len(last_name_search) != 0:
+                grid_response = get_dvs_team_table(db_connection_name.value, last_name_search,
+                                                  key_=f"{last_name_search}_edit_team")
+                selected_rows = grid_response['selected_rows']
+
+                if len(selected_rows) != 0:
+                    selected_row = selected_rows[0]
+                    form_edit_team = st.form(key="edit_team")
+
+                    org_options = list(db_init_setup.organization_dict.values())
+                    org = form_edit_team.selectbox(label='Organization*', options=org_options,
+                                                   index=org_options.index(
+                                                           db_init_setup.organization_dict
+                                                           [selected_row['org_id']]))
+                    team_name = form_edit_team.text_input(label='Name*', value=selected_row['team_name'])
+                    team_address = form_edit_team.text_input(label='Address',
+                                                             value=selected_row['team_address'])
+                    team_city = form_edit_team.text_input(label='City', value=selected_row['team_city'])
+                    team_state = form_edit_team.text_input(label='State', value=selected_row['team_state'])
+                    team_postcode = form_edit_team.text_input(label='Postcode', value=selected_row['team_postcode'])
+                    team_country = form_edit_team.text_input(label='Country', value=selected_row['team_country'])
+                    team_phone = form_edit_team.text_input(label='Phone', value=selected_row['team_phone'])
+                    team_email = form_edit_team.text_input(label='Email', value=selected_row['team_email'])
+                    team_website = form_edit_team.text_input(label='Website', value=selected_row['team_website'])
+
+                    facility_options = list(db_init_setup.facility_dict.values())
+                    team_facility = form_edit_team.selectbox(label='Facility', options=facility_options,
+                                                             index=facility_options.
+                                                             index(db_init_setup.
+                                                                   facility_dict[selected_row['dvs_facility_id']]))
+
+                    trainer_options = list(db_init_setup.trainer_dict.values())
+                    team_trainer = form_edit_team.selectbox(label='Trainer', options=trainer_options,
+                                                            index=trainer_options.index(
+                                                                    db_init_setup.trainer_dict[
+                                                                        selected_row['dvs_trainer_id']
+                                                                    ]
+                                                            ))
+
+                    form_edit_team.markdown('*Required')
+                    submit_edit_team = form_edit_team.form_submit_button(label='SUBMIT')
+                    if submit_edit_team:
+                        # Check if all required fields are entered
+                        req_fields = check_required_fields(team_name)
+
+                        # Check for required fields
+                        if not req_fields:
+                            st.error('All required fields must be entered')
+                            st.stop()
+
+                        payload_obj = DVS_team(db_init_setup.reverse_organization_dict[org],
+                                               team_name, team_address, team_city, team_state, team_postcode,
+                                               team_country, team_phone, team_email, team_website,
+                                               db_init_setup.reverse_facility_dict[team_facility],
+                                               db_init_setup.reverse_trainer_dict[team_trainer])
+                        update_dvs_team(db_name=db_connection_name.value,
+                                       team_id=selected_row['team_id'],
+                                       payload=payload_obj)
+                        st.success('Team has been successfully updated!')
 
 # Report tab
 with tab_report:

@@ -624,6 +624,40 @@ def add_org_to_db(payload: DVS_organization, org_id: int, db_name: str) -> int:
     return 1
 
 
+def update_org_on_db(payload: DVS_organization, org_id: int, db_name: str) -> int:
+    """
+    Endpoint to update a dvs facility row
+    :param payload:
+    :param org_id:
+    :param db_name:
+    :return:
+    """
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/edit/update_dvs_org/{org_id}/{db_name}"
+    headers = {
+        'Content-Type': 'application/json',
+    }
+    response = requests.request("POST", url, headers=headers, data=json.dumps(payload.__dict__))
+
+    return response.status_code
+
+
+def update_team_on_db(payload: DVS_team, team_id: int, db_name: str) -> int:
+    """
+    Endpoint to update a dvs team row
+    :param payload:
+    :param team_id:
+    :param db_name:
+    :return:
+    """
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/edit/update_dvs_team/{team_id}/{db_name}"
+    headers = {
+        'Content-Type': 'application/json',
+    }
+    response = requests.request("POST", url, headers=headers, data=json.dumps(payload.__dict__))
+
+    return response.status_code
+
+
 def check_team_exists(team_name: str, db_name: str) -> int:
     """
     Team duplicate check
