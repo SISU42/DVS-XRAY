@@ -183,6 +183,31 @@ def convert_to_aggrid(df: pd.DataFrame, key_: str) -> AgGridReturn:
                   key=key_)
 
 
+def get_table(url: str, search_string: str, sort_column: str) -> pd.DataFrame:
+    """
+    get a select all table based on the url
+    :param search_string:
+    :param url:
+    :param sort_column:
+    :return:
+    """
+    payload = {}
+    headers = {}
+
+    response = requests.request("GET", url, headers=headers, data=payload).json()
+
+    df = pd.DataFrame.from_records(response)
+
+    # Filter based on last_name_search
+    filter_0 = df[sort_column].apply(lambda x: x.lower()) == search_string.lower()
+
+    df = df.where(filter_0) \
+        .sort_values([sort_column]) \
+        .dropna(axis=0, how='all')
+
+    return df
+
+
 def get_dvs_client_table(db_name: str, last_name_search: str, key_: str) -> AgGridReturn:
     """
     Get dvs client table as an Aggrid dataframe
@@ -190,47 +215,69 @@ def get_dvs_client_table(db_name: str, last_name_search: str, key_: str) -> AgGr
     :return:
     """
     url = f"https://deliveryvaluesystemapidev.azurewebsites.net/dvs_client_table/{db_name}"
-
-    payload = {}
-    headers = {}
-
-    response = requests.request("GET", url, headers=headers, data=payload).json()
-
-    df = pd.DataFrame.from_records(response)
-
-    # Filter based on last_name_search
-    filter_0 = df['client_lastname'].apply(lambda x: x.lower()) == last_name_search.lower()
-
-    df = df.where(filter_0) \
-        .sort_values(['client_lastname']) \
-        .dropna(axis=0, how='all')
-
+    df = get_table(url, last_name_search, 'client_lastname')
     return convert_to_aggrid(df, key_)
 
 
-def get_dvs_player_table(last_name_search: str, key_: str) -> AgGridReturn:
+def get_dvs_player_table(db_name: str, last_name_search: str, key_: str) -> AgGridReturn:
     """
     Same functionality as dvs_client but for forecaster db on dvs_player
     :param last_name_search:
     :param key_:
     :return:
     """
-    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/dvs_player_table/"
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/dvs_player_table/{db_name}"
+    df = get_table(url, last_name_search, 'last_name')
+    return convert_to_aggrid(df, key_)
 
-    payload = {}
-    headers = {}
 
-    response = requests.request("GET", url, headers=headers, data=payload).json()
+def get_dvs_trainer_table(db_name: str, last_name_search: str, key_: str) -> AgGridReturn:
+    """
+    Same functionality as dvs_client but for forecaster db on dvs_player
+    :param last_name_search:
+    :param key_:
+    :return:
+    """
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/tables/dvs_trainer_table/{db_name}"
+    df = get_table(url, last_name_search, 'trainer_lastname')
+    return convert_to_aggrid(df, key_)
 
-    df = pd.DataFrame.from_records(response)
 
-    # Filter based on last_name_search
-    filter_0 = df['last_name'].apply(lambda x: x.lower()) == last_name_search.lower()
+def get_dvs_facility_table(db_name: str, last_name_search: str, key_: str) -> AgGridReturn:
+    """
+    Get facility table
+    :param last_name_search:
+    :param key_:
+    :return:
+    """
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/tables/dvs_facility_table/{db_name}"
+    df = get_table(url, last_name_search, 'facility_name')
+    return convert_to_aggrid(df, key_)
 
-    df = df.where(filter_0) \
-        .sort_values(['last_name']) \
-        .dropna(axis=0, how='all')
 
+def get_dvs_org_table(db_name: str, last_name_search: str, key_: str) -> AgGridReturn:
+    """
+    Select all org table
+    :param db_name:
+    :param last_name_search:
+    :param key_:
+    :return:
+    """
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/tables/dvs_org_table/{db_name}"
+    df = get_table(url, last_name_search, 'org_name')
+    return convert_to_aggrid(df, key_)
+
+
+def get_dvs_team_table(db_name: str, last_name_search: str, key_: str) -> AgGridReturn:
+    """
+    Select all team table
+    :param db_name:
+    :param last_name_search:
+    :param key_:
+    :return:
+    """
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/tables/dvs_team_table/{db_name}"
+    df = get_table(url, last_name_search, 'team_name')
     return convert_to_aggrid(df, key_)
 
 
@@ -465,6 +512,25 @@ def add_trainer_to_db(payload: DVS_trainer, trainer_id: int, db_name: str) -> in
     return 1
 
 
+def update_trainer_on_db(payload: DVS_trainer, trainer_id: int, db_name: str) -> int:
+    """
+    Update on dvs_trainer_table
+    :param payload:
+    :param trainer_id:
+    :param db_name:
+    :return:
+    """
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/edit/update_dvs_trainer/{trainer_id}/{db_name}"
+
+    headers = {
+        'Content-Type': 'application/json',
+    }
+
+    response = requests.request("POST", url, headers=headers, data=json.dumps(payload.__dict__))
+
+    return response.status_code
+
+
 def check_facility_exists(facility_name: str, db_name: str) -> int:
     """
     Facility diplicate check trigger
@@ -500,6 +566,25 @@ def add_facility_to_db(payload: DVS_facility, facility_id: int, db_name: str) ->
     response = requests.request("POST", url, headers=headers, data=json.dumps(payload.__dict__))
 
     return 1
+
+
+def update_facility_on_db(payload: DVS_facility, facility_id: int, db_name: str) -> int:
+    """
+    Endpoint to update a dvs facility row
+    :param payload:
+    :param facility_id:
+    :param db_name:
+    :return:
+    """
+    url = f"https://deliveryvaluesystemapidev.azurewebsites.net/edit/update_dvs_facility/{facility_id}/{db_name}"
+
+    headers = {
+        'Content-Type': 'application/json',
+    }
+
+    response = requests.request("POST", url, headers=headers, data=json.dumps(payload.__dict__))
+
+    return response.status_code
 
 
 def check_org_exists(org_name: str, db_name: str) -> int:

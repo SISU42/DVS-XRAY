@@ -21,7 +21,7 @@ from api_calls import get_db_status, get_trainer_dict, get_facility_dict, get_te
     get_dvs_score, check_duplicates, generate_primary_key, add_player_to_db, add_eval_info_to_db, add_eval_rom_to_db, \
     add_dvs_score_to_db, get_analyst_dict, check_trainer_exists, add_trainer_to_db, check_facility_exists, \
     add_facility_to_db, check_org_exists, check_team_exists, add_team_to_db, DBCONNECTException, update_client_on_db, \
-    update_player_on_db
+    update_player_on_db, update_trainer_on_db, get_dvs_trainer_table, get_dvs_facility_table, update_facility_on_db
 
 from msk.uploaded_video_file import UploadedFile, uploaded_videos_dir_name, upload_video, video_exists, get_video_bytes
 
@@ -315,7 +315,7 @@ with tab_player.expander('Edit existing player'):
                 org_options = list(db_init_setup.organization_dict.values())
                 organization = edit_player_form.selectbox(label='Organization*', options=org_options,
                                                           index=org_options.index(
-                                                              selected_row['current_organization'].strip()))
+                                                                  selected_row['current_organization']))
 
                 team_options = list(db_init_setup.team_dict.values())
                 team = edit_player_form.selectbox(label="Team*", options=team_options,
@@ -894,6 +894,30 @@ def insert_into_dvs_trainer(db_name: str, table_name: str, pk: str, payload: DVS
     return True
 
 
+def update_dvs_trainer(db_name: str, dvs_trainer_id: int, payload: DVS_trainer):
+    """
+    Update the trainer row given a trainer id
+    :param db_name:
+    :param dvs_trainer_id:
+    :param payload:
+    :return:
+    """
+    update_trainer_on_db(db_name=db_name, trainer_id=dvs_trainer_id, payload=payload)
+    return True
+
+
+def update_dvs_facility(db_name: str, dvs_facility_id: int, payload: DVS_facility):
+    """
+    Update the facility row given a facility id
+    :param db_name:
+    :param dvs_facility_id:
+    :param payload:
+    :return:
+    """
+    update_facility_on_db(payload, dvs_facility_id, db_name)
+    return True
+
+
 def insert_into_dvs_facility(db_name, table_name, pk, payload):
     # Generate primary key
     pk_to_insert = generate_primary_key(pk, table_name, db_name)
@@ -980,8 +1004,54 @@ with tab_admin:
                                          payload=payload_obj)
                 st.success('Trainer has been successfully added!')
 
-        # with tab_admin.expander('Edit existing trainer'):
-        #     pass
+        with tab_admin.expander('Edit existing trainer'):
+            # Add a search box
+            last_name_search = st.text_input(label="Search by last name: ", max_chars=50, key='edit_trainer')
+            if len(last_name_search) != 0:
+                grid_response = get_dvs_trainer_table(db_connection_name.value, last_name_search,
+                                                      key_=f"{last_name_search}_edit_trainer")
+                selected_rows = grid_response['selected_rows']
+
+                if len(selected_rows) != 0:
+                    selected_row = selected_rows[0]
+                    form_edit_trainer = st.form(key="edit_trainer")
+                    trainer_firstname = form_edit_trainer.text_input(label='First name*',
+                                                                     value=selected_row['trainer_firstname'])
+                    trainer_lastname = form_edit_trainer.text_input(label='Last name*',
+                                                                    value=selected_row['trainer_lastname'])
+                    trainer_email = form_edit_trainer.text_input(label='Email', value=selected_row['trainer_email'])
+
+                    facility_options = list(db_init_setup.facility_dict.values())
+                    trainer_facility = form_edit_trainer.selectbox(label='Facility*',
+                                                                   options=facility_options,
+                                                                   index=facility_options.index(
+                                                                           db_init_setup.facility_dict
+                                                                           [selected_row['dvs_facility_id']]))
+                    trainer_phone = form_edit_trainer.text_input(label='Phone', value=selected_row['trainer_phone'])
+
+                    form_edit_trainer.markdown('*Required')
+
+                    submit_add_trainer = form_edit_trainer.form_submit_button(label='SUBMIT')
+
+                    if submit_add_trainer:
+                        # Check if all required fields are entered
+                        req_fields = check_required_fields(trainer_firstname, trainer_lastname, trainer_facility)
+
+                        # Check for required fields
+                        if not req_fields:
+                            st.error('All required fields must be entered')
+                            st.stop()
+
+                        payload_obj = DVS_trainer(trainer_lastname=trainer_lastname,
+                                                  trainer_firstname=trainer_firstname,
+                                                  dvs_facility_id=int(
+                                                          db_init_setup.reverse_facility_dict[trainer_facility]),
+                                                  trainer_phone=trainer_phone,
+                                                  trainer_email=trainer_email)
+                        update_dvs_trainer(db_name=db_connection_name.value,
+                                           dvs_trainer_id=selected_row['dvs_trainer_id'],
+                                           payload=payload_obj)
+                        st.success('Trainer has been successfully updated!')
 
         with tab_admin.expander('Add facility'):
             form_add_facility_admin = st.form(key='add_facility_admin')
@@ -1019,8 +1089,46 @@ with tab_admin:
                                          payload=payload_obj)
                 st.success('Facility has been successfully added!')
 
-        # with tab_admin.expander('Edit existing facility'):
-        #     pass
+        with tab_admin.expander('Edit existing facility'):
+            # Add a search box
+            last_name_search = st.text_input(label="Search by last name: ", max_chars=50, key='edit_facility')
+            if len(last_name_search) != 0:
+                grid_response = get_dvs_facility_table(db_connection_name.value, last_name_search,
+                                                       key_=f"{last_name_search}_edit_trainer")
+                selected_rows = grid_response['selected_rows']
+
+                if len(selected_rows) != 0:
+                    selected_row = selected_rows[0]
+                    form_edit_facility = st.form(key="edit_facility")
+
+                    facility_name = form_edit_facility.text_input(label='Facility name*',
+                                                                  value=selected_row['facility_name'])
+                    phone_ = form_edit_facility.text_input(label='Phone', value=selected_row['facility_phone'])
+                    address = form_edit_facility.text_input(label='Address', value=selected_row['facility_address'])
+                    city = form_edit_facility.text_input(label='City', value=selected_row['facility_city'])
+                    state = form_edit_facility.text_input(label='State', value=selected_row['facility_state'])
+                    country = form_edit_facility.text_input(label='Country', value=selected_row['facility_country'])
+                    post_code = form_edit_facility.text_input(label='Post code',
+                                                              value=selected_row['facility_postcode'])
+
+                    form_edit_facility.markdown('*Required')
+                    submit_edit_facility = form_edit_facility.form_submit_button(label='SUBMIT')
+                    if submit_edit_facility:
+                        # Check if all required fields are entered
+                        req_fields = check_required_fields(facility_name)
+
+                        # Check for required fields
+                        if not req_fields:
+                            st.error('All required fields must be entered')
+                            st.stop()
+
+                        payload_obj = DVS_facility(facility_name=facility_name, facility_phone=phone_,
+                                                   facility_address=address, facility_city=city, facility_state=state,
+                                                   facility_country=country, facility_postcode=post_code)
+                        update_dvs_facility(db_name=db_connection_name.value,
+                                           dvs_facility_id=selected_row['dvs_facility_id'],
+                                           payload=payload_obj)
+                        st.success('Facility has been successfully updated!')
 
         with tab_admin.expander('Add organinzation'):
             form_add_org_admin = st.form(key='add_organization_admin')
